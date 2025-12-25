@@ -1,44 +1,80 @@
 -- Gridfall Client Main
--- Initializes all client-side systems
+-- Complete rewrite with all fixes
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
 local RunService = game:GetService("RunService")
-local ContextActionService = game:GetService("ContextActionService")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- DISABLE ROBLOX DEFAULT UIS THAT INTERFERE
+-- DISABLE ALL ROBLOX DEFAULT UIS
 StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
-StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false) -- This fixes Tab
-
--- Wait for shared modules
-local Shared = require(ReplicatedStorage:WaitForChild("Shared"))
-local Constants = Shared.Constants
-
--- Client modules
-local CameraController = require(script.CameraController)
-local InputController = require(script.InputController)
-
--- Wait for remotes
-local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
+StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
 
 ---------------------------------------
--- DIRECT WASD MOVEMENT (bypasses Blaster control interception)
+-- STATE
 ---------------------------------------
-local keysDown = {
-	W = false,
-	A = false,
-	S = false,
-	D = false,
-}
+local currentEquippedSlot = 0 -- 0 = none, 1-3 = slot number
+local isInventoryOpen = false
+local weaponTools = {} -- {[1] = Tool, [2] = Tool, ...}
+local hudScreen = nil
+local inventoryScreen = nil
 
-local function getMovementDirection()
-	local direction = Vector3.new(0, 0, 0)
+---------------------------------------
+-- CAMERA SYSTEM (zoom-based, not ViewModel)
+---------------------------------------
+local TPP_MIN_ZOOM = 8
+local TPP_MAX_ZOOM = 15
+local FPP_MIN_ZOOM = 0.5
+local FPP_MAX_ZOOM = 0.5
+
+local function setCameraMode(mode)
+	if mode == "FPP" then
+		player.CameraMinZoomDistance = FPP_MIN_ZOOM
+		player.CameraMaxZoomDistance = FPP_MAX_ZOOM
+		print("[Camera] Switched to FPP")
+	else
+		player.CameraMinZoomDistance = TPP_MIN_ZOOM
+		player.CameraMaxZoomDistance = TPP_MAX_ZOOM
+		print("[Camera] Switched to TPP")
+	end
+end
+
+-- Start in TPP
+setCameraMode("TPP")
+
+---------------------------------------
+-- DIRECT WASD MOVEMENT (IGNORES gameProcessed for WASD)
+---------------------------------------
+local keysDown = { W = false, A = false, S = false, D = false }
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	-- ALWAYS track WASD regardless of gameProcessed
+	if input.KeyCode == Enum.KeyCode.W then keysDown.W = true end
+	if input.KeyCode == Enum.KeyCode.A then keysDown.A = true end
+	if input.KeyCode == Enum.KeyCode.S then keysDown.S = true end
+	if input.KeyCode == Enum.KeyCode.D then keysDown.D = true end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.KeyCode == Enum.KeyCode.W then keysDown.W = false end
+	if input.KeyCode == Enum.KeyCode.A then keysDown.A = false end
+	if input.KeyCode == Enum.KeyCode.S then keysDown.S = false end
+	if input.KeyCode == Enum.KeyCode.D then keysDown.D = false end
+end)
+
+RunService.RenderStepped:Connect(function()
+	local character = player.Character
+	if not character then return end
 	
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return end
+	
+	local direction = Vector3.new(0, 0, 0)
 	if keysDown.W then direction = direction + Vector3.new(0, 0, -1) end
 	if keysDown.S then direction = direction + Vector3.new(0, 0, 1) end
 	if keysDown.A then direction = direction + Vector3.new(-1, 0, 0) end
@@ -46,76 +82,130 @@ local function getMovementDirection()
 	
 	if direction.Magnitude > 0 then
 		direction = direction.Unit
+		local camera = workspace.CurrentCamera
+		local camLook = Vector3.new(camera.CFrame.LookVector.X, 0, camera.CFrame.LookVector.Z)
+		local camRight = Vector3.new(camera.CFrame.RightVector.X, 0, camera.CFrame.RightVector.Z)
+		
+		if camLook.Magnitude > 0 then camLook = camLook.Unit end
+		if camRight.Magnitude > 0 then camRight = camRight.Unit end
+		
+		local worldDir = (camLook * -direction.Z) + (camRight * direction.X)
+		humanoid:Move(worldDir, false)
+	else
+		humanoid:Move(Vector3.new(0, 0, 0), false)
+	end
+end)
+
+print("[Client] Direct WASD movement active (ignores gameProcessed)")
+
+---------------------------------------
+-- WEAPON SYSTEM
+---------------------------------------
+local function getWeaponTools()
+	local tools = {}
+	local backpack = player:FindFirstChild("Backpack")
+	local character = player.Character
+	
+	if backpack then
+		for _, item in ipairs(backpack:GetChildren()) do
+			if item:IsA("Tool") then
+				table.insert(tools, item)
+			end
+		end
 	end
 	
-	return direction
-end
-
-local function setupDirectMovement()
-	-- Track key states
-	UserInputService.InputBegan:Connect(function(input, gameProcessed)
-		if gameProcessed then return end
-		
-		if input.KeyCode == Enum.KeyCode.W then keysDown.W = true end
-		if input.KeyCode == Enum.KeyCode.A then keysDown.A = true end
-		if input.KeyCode == Enum.KeyCode.S then keysDown.S = true end
-		if input.KeyCode == Enum.KeyCode.D then keysDown.D = true end
-	end)
-	
-	UserInputService.InputEnded:Connect(function(input)
-		if input.KeyCode == Enum.KeyCode.W then keysDown.W = false end
-		if input.KeyCode == Enum.KeyCode.A then keysDown.A = false end
-		if input.KeyCode == Enum.KeyCode.S then keysDown.S = false end
-		if input.KeyCode == Enum.KeyCode.D then keysDown.D = false end
-	end)
-	
-	-- Apply movement every frame
-	RunService.RenderStepped:Connect(function()
-		local character = player.Character
-		if not character then return end
-		
-		local humanoid = character:FindFirstChildOfClass("Humanoid")
-		local hrp = character:FindFirstChild("HumanoidRootPart")
-		
-		if not humanoid or not hrp then return end
-		
-		local moveDir = getMovementDirection()
-		
-		if moveDir.Magnitude > 0 then
-			-- Get camera direction for relative movement
-			local camera = workspace.CurrentCamera
-			local cameraDirection = camera.CFrame.LookVector
-			local cameraRight = camera.CFrame.RightVector
-			
-			-- Flatten to horizontal plane
-			cameraDirection = Vector3.new(cameraDirection.X, 0, cameraDirection.Z).Unit
-			cameraRight = Vector3.new(cameraRight.X, 0, cameraRight.Z).Unit
-			
-			-- Calculate world movement direction
-			local worldDirection = (cameraDirection * -moveDir.Z) + (cameraRight * moveDir.X)
-			
-			-- Move the humanoid
-			humanoid:Move(worldDirection, false)
-		else
-			-- Stop movement
-			humanoid:Move(Vector3.new(0, 0, 0), false)
+	if character then
+		for _, item in ipairs(character:GetChildren()) do
+			if item:IsA("Tool") then
+				table.insert(tools, item)
+			end
 		end
-	end)
+	end
 	
-	print("[Client] Direct WASD movement system active")
+	table.sort(tools, function(a, b) return a.Name < b.Name end)
+	return tools
 end
 
--- Initialize direct movement
-setupDirectMovement()
+local function updateWeaponSlots()
+	weaponTools = getWeaponTools()
+	
+	if not hudScreen then return end
+	local slotsFrame = hudScreen:FindFirstChild("WeaponSlots")
+	if not slotsFrame then return end
+	
+	for i = 1, 3 do
+		local slot = slotsFrame:FindFirstChild("Slot" .. i)
+		if slot then
+			local nameLabel = slot:FindFirstChild("WeaponName")
+			if not nameLabel then
+				nameLabel = Instance.new("TextLabel")
+				nameLabel.Name = "WeaponName"
+				nameLabel.Size = UDim2.new(1, -6, 0, 12)
+				nameLabel.Position = UDim2.new(0, 3, 1, -15)
+				nameLabel.BackgroundTransparency = 1
+				nameLabel.TextColor3 = Color3.new(1, 1, 1)
+				nameLabel.TextSize = 8
+				nameLabel.Font = Enum.Font.Gotham
+				nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+				nameLabel.Parent = slot
+			end
+			
+			if weaponTools[i] then
+				nameLabel.Text = weaponTools[i].Name
+			else
+				nameLabel.Text = "Empty"
+			end
+			
+			-- Highlight equipped slot
+			if i == currentEquippedSlot then
+				slot.BackgroundColor3 = Color3.fromRGB(65, 185, 220)
+				slot.BackgroundTransparency = 0.2
+			else
+				slot.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+				slot.BackgroundTransparency = 0.3
+			end
+		end
+	end
+end
+
+local function equipWeaponSlot(slotNumber)
+	local character = player.Character
+	if not character then return end
+	
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return end
+	
+	weaponTools = getWeaponTools()
+	
+	-- Toggle: if same slot pressed, unequip
+	if currentEquippedSlot == slotNumber then
+		humanoid:UnequipTools()
+		currentEquippedSlot = 0
+		setCameraMode("TPP")
+		print("[Weapon] Unequipped - TPP mode")
+	else
+		-- Equip new weapon
+		if weaponTools[slotNumber] then
+			humanoid:UnequipTools()
+			humanoid:EquipTool(weaponTools[slotNumber])
+			currentEquippedSlot = slotNumber
+			setCameraMode("FPP")
+			print("[Weapon] Equipped: " .. weaponTools[slotNumber].Name .. " - FPP mode")
+		end
+	end
+	
+	updateWeaponSlots()
+end
 
 ---------------------------------------
--- SIMPLE HUD (since StarterGui not syncing)
+-- HUD
 ---------------------------------------
-local function createSimpleHUD()
+local function createHUD()
 	local screen = Instance.new("ScreenGui")
 	screen.Name = "GridfallHUD"
 	screen.ResetOnSpawn = false
 	screen.IgnoreGuiInset = true
+	screen.DisplayOrder = 10
 	screen.Parent = playerGui
 	
 	-- Crosshair
@@ -126,12 +216,9 @@ local function createSimpleHUD()
 	crosshair.BackgroundColor3 = Color3.new(1, 1, 1)
 	crosshair.BorderSizePixel = 0
 	crosshair.Parent = screen
+	Instance.new("UICorner", crosshair).CornerRadius = UDim.new(0, 2)
 	
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 2)
-	corner.Parent = crosshair
-	
-	-- Simple weapon slot indicator at bottom
+	-- Weapon slots
 	local slotsFrame = Instance.new("Frame")
 	slotsFrame.Name = "WeaponSlots"
 	slotsFrame.Size = UDim2.new(0, 200, 0, 50)
@@ -142,17 +229,15 @@ local function createSimpleHUD()
 	for i = 1, 3 do
 		local slot = Instance.new("Frame")
 		slot.Name = "Slot" .. i
-		slot.Size = UDim2.new(0, 55, 0, 45)
-		slot.Position = UDim2.new(0, (i-1) * 60, 0, 0)
+		slot.Size = UDim2.new(0, 60, 0, 45)
+		slot.Position = UDim2.new(0, (i-1) * 65, 0, 0)
 		slot.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
 		slot.BackgroundTransparency = 0.3
 		slot.Parent = slotsFrame
-		
-		local slotCorner = Instance.new("UICorner")
-		slotCorner.CornerRadius = UDim.new(0, 6)
-		slotCorner.Parent = slot
+		Instance.new("UICorner", slot).CornerRadius = UDim.new(0, 6)
 		
 		local numLabel = Instance.new("TextLabel")
+		numLabel.Name = "SlotNumber"
 		numLabel.Size = UDim2.new(0, 15, 0, 15)
 		numLabel.Position = UDim2.new(0, 3, 0, 3)
 		numLabel.BackgroundColor3 = Color3.fromRGB(65, 185, 220)
@@ -161,38 +246,205 @@ local function createSimpleHUD()
 		numLabel.TextSize = 10
 		numLabel.Font = Enum.Font.GothamBold
 		numLabel.Parent = slot
-		
-		local numCorner = Instance.new("UICorner")
-		numCorner.CornerRadius = UDim.new(0, 3)
-		numCorner.Parent = numLabel
+		Instance.new("UICorner", numLabel).CornerRadius = UDim.new(0, 3)
 	end
 	
-	-- Hint text
+	-- Hint
 	local hint = Instance.new("TextLabel")
 	hint.Name = "Hint"
-	hint.Size = UDim2.new(0, 200, 0, 20)
-	hint.Position = UDim2.new(0.5, -100, 1, -30)
+	hint.Size = UDim2.new(0, 300, 0, 20)
+	hint.Position = UDim2.new(0.5, -150, 1, -25)
 	hint.BackgroundTransparency = 1
-	hint.Text = "Press 1/2/3 for weapons | TAB for inventory"
-	hint.TextColor3 = Color3.fromRGB(180, 180, 180)
-	hint.TextSize = 12
+	hint.Text = "1/2/3: Weapons | TAB: Inventory | Press again to unequip"
+	hint.TextColor3 = Color3.fromRGB(150, 150, 150)
+	hint.TextSize = 11
 	hint.Font = Enum.Font.Gotham
 	hint.Parent = screen
 	
-	print("[Client] HUD created")
 	return screen
 end
 
 ---------------------------------------
+-- INVENTORY SCREEN
+---------------------------------------
+local function createInventoryScreen()
+	local screen = Instance.new("ScreenGui")
+	screen.Name = "GridfallInventory"
+	screen.ResetOnSpawn = false
+	screen.IgnoreGuiInset = true
+	screen.DisplayOrder = 20
+	screen.Enabled = true
+	screen.Parent = playerGui
+	
+	-- Main container (hidden by default)
+	local container = Instance.new("Frame")
+	container.Name = "Container"
+	container.Size = UDim2.new(0.6, 0, 0.7, 0)
+	container.Position = UDim2.new(0.2, 0, 0.15, 0)
+	container.BackgroundColor3 = Color3.fromRGB(20, 25, 35)
+	container.BackgroundTransparency = 0.1
+	container.Visible = false
+	container.Parent = screen
+	Instance.new("UICorner", container).CornerRadius = UDim.new(0, 12)
+	
+	-- Header
+	local header = Instance.new("TextLabel")
+	header.Name = "Header"
+	header.Size = UDim2.new(1, 0, 0, 50)
+	header.BackgroundColor3 = Color3.fromRGB(30, 35, 50)
+	header.Text = "INVENTORY"
+	header.TextColor3 = Color3.new(1, 1, 1)
+	header.TextSize = 24
+	header.Font = Enum.Font.GothamBold
+	header.Parent = container
+	local headerCorner = Instance.new("UICorner", header)
+	headerCorner.CornerRadius = UDim.new(0, 12)
+	
+	-- Weapons section
+	local weaponsLabel = Instance.new("TextLabel")
+	weaponsLabel.Size = UDim2.new(0, 100, 0, 30)
+	weaponsLabel.Position = UDim2.new(0, 20, 0, 60)
+	weaponsLabel.BackgroundTransparency = 1
+	weaponsLabel.Text = "WEAPONS"
+	weaponsLabel.TextColor3 = Color3.fromRGB(65, 185, 220)
+	weaponsLabel.TextSize = 14
+	weaponsLabel.Font = Enum.Font.GothamBold
+	weaponsLabel.TextXAlignment = Enum.TextXAlignment.Left
+	weaponsLabel.Parent = container
+	
+	-- Weapon slots in inventory
+	for i = 1, 3 do
+		local slot = Instance.new("Frame")
+		slot.Name = "InvSlot" .. i
+		slot.Size = UDim2.new(0, 150, 0, 80)
+		slot.Position = UDim2.new(0, 20 + (i-1) * 160, 0, 100)
+		slot.BackgroundColor3 = Color3.fromRGB(40, 45, 60)
+		slot.Parent = container
+		Instance.new("UICorner", slot).CornerRadius = UDim.new(0, 8)
+		
+		local slotNum = Instance.new("TextLabel")
+		slotNum.Size = UDim2.new(0, 25, 0, 25)
+		slotNum.Position = UDim2.new(0, 5, 0, 5)
+		slotNum.BackgroundColor3 = Color3.fromRGB(65, 185, 220)
+		slotNum.Text = tostring(i)
+		slotNum.TextColor3 = Color3.new(1, 1, 1)
+		slotNum.TextSize = 14
+		slotNum.Font = Enum.Font.GothamBold
+		slotNum.Parent = slot
+		Instance.new("UICorner", slotNum).CornerRadius = UDim.new(0, 4)
+		
+		local weaponName = Instance.new("TextLabel")
+		weaponName.Name = "WeaponName"
+		weaponName.Size = UDim2.new(1, -10, 0, 20)
+		weaponName.Position = UDim2.new(0, 5, 1, -25)
+		weaponName.BackgroundTransparency = 1
+		weaponName.Text = "Empty"
+		weaponName.TextColor3 = Color3.new(1, 1, 1)
+		weaponName.TextSize = 11
+		weaponName.Font = Enum.Font.Gotham
+		weaponName.TextTruncate = Enum.TextTruncate.AtEnd
+		weaponName.TextXAlignment = Enum.TextXAlignment.Left
+		weaponName.Parent = slot
+	end
+	
+	-- Close hint
+	local closeHint = Instance.new("TextLabel")
+	closeHint.Size = UDim2.new(1, 0, 0, 30)
+	closeHint.Position = UDim2.new(0, 0, 1, -30)
+	closeHint.BackgroundTransparency = 1
+	closeHint.Text = "Press TAB or ESC to close"
+	closeHint.TextColor3 = Color3.fromRGB(120, 120, 120)
+	closeHint.TextSize = 12
+	closeHint.Font = Enum.Font.Gotham
+	closeHint.Parent = container
+	
+	return screen, container
+end
+
+local function updateInventoryScreen()
+	if not inventoryScreen then return end
+	local container = inventoryScreen:FindFirstChild("Container")
+	if not container then return end
+	
+	weaponTools = getWeaponTools()
+	
+	for i = 1, 3 do
+		local slot = container:FindFirstChild("InvSlot" .. i)
+		if slot then
+			local nameLabel = slot:FindFirstChild("WeaponName")
+			if nameLabel then
+				if weaponTools[i] then
+					nameLabel.Text = weaponTools[i].Name
+				else
+					nameLabel.Text = "Empty"
+				end
+			end
+		end
+	end
+end
+
+local function toggleInventory()
+	isInventoryOpen = not isInventoryOpen
+	
+	if inventoryScreen then
+		local container = inventoryScreen:FindFirstChild("Container")
+		if container then
+			container.Visible = isInventoryOpen
+			if isInventoryOpen then
+				updateInventoryScreen()
+			end
+		end
+	end
+	
+	print("[Inventory] " .. (isInventoryOpen and "OPENED" or "CLOSED"))
+end
+
+---------------------------------------
+-- INPUT HANDLING
+---------------------------------------
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	-- Tab always works
+	if input.KeyCode == Enum.KeyCode.Tab then
+		toggleInventory()
+		return
+	end
+	
+	-- ESC closes inventory
+	if input.KeyCode == Enum.KeyCode.Escape and isInventoryOpen then
+		toggleInventory()
+		return
+	end
+	
+	-- Weapon slots (only when inventory closed)
+	if not isInventoryOpen then
+		if input.KeyCode == Enum.KeyCode.One then
+			equipWeaponSlot(1)
+		elseif input.KeyCode == Enum.KeyCode.Two then
+			equipWeaponSlot(2)
+		elseif input.KeyCode == Enum.KeyCode.Three then
+			equipWeaponSlot(3)
+		end
+	end
+end)
+
+---------------------------------------
 -- INITIALIZE
 ---------------------------------------
-CameraController.Init()
-InputController.Init()
+hudScreen = createHUD()
+inventoryScreen, _ = createInventoryScreen()
 
--- Create simple HUD
-createSimpleHUD()
+-- Update weapon slots periodically
+task.spawn(function()
+	while true do
+		task.wait(1)
+		updateWeaponSlots()
+	end
+end)
 
--- Disable default backpack
-StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+-- Initial update
+task.delay(1, function()
+	updateWeaponSlots()
+	print("[Client] Weapon slots updated")
+end)
 
-print("[Gridfall] Client initialized successfully")
+print("[Gridfall] Client initialized - WASD should work now!")
