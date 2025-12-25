@@ -27,126 +27,86 @@ local InputController = require(script.InputController)
 local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
 
 ---------------------------------------
--- MOVEMENT ENABLER - AGGRESSIVE VERSION
+-- DIRECT WASD MOVEMENT (bypasses Blaster control interception)
 ---------------------------------------
-local function enableMovement(character)
-	if not character then return end
+local keysDown = {
+	W = false,
+	A = false,
+	S = false,
+	D = false,
+}
+
+local function getMovementDirection()
+	local direction = Vector3.new(0, 0, 0)
 	
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	local hrp = character:FindFirstChild("HumanoidRootPart")
+	if keysDown.W then direction = direction + Vector3.new(0, 0, -1) end
+	if keysDown.S then direction = direction + Vector3.new(0, 0, 1) end
+	if keysDown.A then direction = direction + Vector3.new(-1, 0, 0) end
+	if keysDown.D then direction = direction + Vector3.new(1, 0, 0) end
 	
-	if not humanoid then 
-		warn("[Client] No humanoid found!")
-		return 
-	end
-	if not hrp then
-		warn("[Client] No HumanoidRootPart found!")
-		return
-	end
-	
-	-- Unanchor HumanoidRootPart
-	hrp.Anchored = false
-	
-	-- Unanchor ALL parts
-	for _, part in ipairs(character:GetDescendants()) do
-		if part:IsA("BasePart") then
-			part.Anchored = false
-		end
+	if direction.Magnitude > 0 then
+		direction = direction.Unit
 	end
 	
-	-- FORCE movement properties
-	humanoid.PlatformStand = false
-	humanoid.Sit = false
-	humanoid.AutoRotate = true
-	humanoid.WalkSpeed = 16
-	humanoid.JumpPower = 50
-	humanoid.JumpHeight = 7.2
-	
-	-- Enable all humanoid states
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.Running, true)
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.RunningNoPhysics, true)
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.Landed, true)
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, true)
-	
-	-- Disable states that freeze movement
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
-	
-	-- Force to running state
-	local currentState = humanoid:GetState()
-	if currentState == Enum.HumanoidStateType.PlatformStanding or
-	   currentState == Enum.HumanoidStateType.Physics or
-	   currentState == Enum.HumanoidStateType.Seated then
-		humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-	end
+	return direction
 end
 
-local function setupCharacterMovement(character)
-	local humanoid = character:WaitForChild("Humanoid", 10)
-	local hrp = character:WaitForChild("HumanoidRootPart", 10)
-	
-	if not humanoid or not hrp then
-		warn("[Client] Character missing Humanoid or HumanoidRootPart!")
-		return
-	end
-	
-	-- Initial enable after short delay
-	task.wait(0.3)
-	enableMovement(character)
-	
-	-- Log current state
-	print("[Client] Movement enabled. Humanoid state: " .. tostring(humanoid:GetState()))
-	print("[Client] WalkSpeed: " .. humanoid.WalkSpeed .. " | PlatformStand: " .. tostring(humanoid.PlatformStand))
-	
-	-- Keep enabling for 10 seconds to override other scripts
-	task.spawn(function()
-		for i = 1, 100 do
-			task.wait(0.1)
-			enableMovement(character)
-		end
-		print("[Client] Movement enabler finished 10 second cycle")
+local function setupDirectMovement()
+	-- Track key states
+	UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if gameProcessed then return end
+		
+		if input.KeyCode == Enum.KeyCode.W then keysDown.W = true end
+		if input.KeyCode == Enum.KeyCode.A then keysDown.A = true end
+		if input.KeyCode == Enum.KeyCode.S then keysDown.S = true end
+		if input.KeyCode == Enum.KeyCode.D then keysDown.D = true end
 	end)
 	
-	-- Watch for state changes
-	humanoid.StateChanged:Connect(function(old, new)
-		print("[Client] State changed: " .. tostring(old) .. " -> " .. tostring(new))
-		if new == Enum.HumanoidStateType.PlatformStanding or
-		   new == Enum.HumanoidStateType.Physics or
-		   new == Enum.HumanoidStateType.Seated then
-			task.wait(0.05)
-			enableMovement(character)
+	UserInputService.InputEnded:Connect(function(input)
+		if input.KeyCode == Enum.KeyCode.W then keysDown.W = false end
+		if input.KeyCode == Enum.KeyCode.A then keysDown.A = false end
+		if input.KeyCode == Enum.KeyCode.S then keysDown.S = false end
+		if input.KeyCode == Enum.KeyCode.D then keysDown.D = false end
+	end)
+	
+	-- Apply movement every frame
+	RunService.RenderStepped:Connect(function()
+		local character = player.Character
+		if not character then return end
+		
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		local hrp = character:FindFirstChild("HumanoidRootPart")
+		
+		if not humanoid or not hrp then return end
+		
+		local moveDir = getMovementDirection()
+		
+		if moveDir.Magnitude > 0 then
+			-- Get camera direction for relative movement
+			local camera = workspace.CurrentCamera
+			local cameraDirection = camera.CFrame.LookVector
+			local cameraRight = camera.CFrame.RightVector
+			
+			-- Flatten to horizontal plane
+			cameraDirection = Vector3.new(cameraDirection.X, 0, cameraDirection.Z).Unit
+			cameraRight = Vector3.new(cameraRight.X, 0, cameraRight.Z).Unit
+			
+			-- Calculate world movement direction
+			local worldDirection = (cameraDirection * -moveDir.Z) + (cameraRight * moveDir.X)
+			
+			-- Move the humanoid
+			humanoid:Move(worldDirection, false)
+		else
+			-- Stop movement
+			humanoid:Move(Vector3.new(0, 0, 0), false)
 		end
 	end)
 	
-	-- Watch for property changes
-	humanoid:GetPropertyChangedSignal("PlatformStand"):Connect(function()
-		if humanoid.PlatformStand then
-			humanoid.PlatformStand = false
-			print("[Client] Blocked PlatformStand = true")
-		end
-	end)
-	
-	humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
-		if humanoid.WalkSpeed == 0 then
-			humanoid.WalkSpeed = 16
-			print("[Client] Blocked WalkSpeed = 0")
-		end
-	end)
+	print("[Client] Direct WASD movement system active")
 end
 
--- Setup movement for current and future characters
-if player.Character then
-	task.spawn(function()
-		setupCharacterMovement(player.Character)
-	end)
-end
-player.CharacterAdded:Connect(function(char)
-	task.spawn(function()
-		setupCharacterMovement(char)
-	end)
-end)
+-- Initialize direct movement
+setupDirectMovement()
 
 ---------------------------------------
 -- SIMPLE HUD (since StarterGui not syncing)
