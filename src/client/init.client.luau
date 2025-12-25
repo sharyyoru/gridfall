@@ -6,9 +6,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
 local RunService = game:GetService("RunService")
+local ContextActionService = game:GetService("ContextActionService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+
+-- DISABLE ROBLOX DEFAULT UIS THAT INTERFERE
+StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false) -- This fixes Tab
 
 -- Wait for shared modules
 local Shared = require(ReplicatedStorage:WaitForChild("Shared"))
@@ -22,7 +27,7 @@ local InputController = require(script.InputController)
 local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
 
 ---------------------------------------
--- MOVEMENT ENABLER (runs from client since StarterCharacterScripts not syncing)
+-- MOVEMENT ENABLER - AGGRESSIVE VERSION
 ---------------------------------------
 local function enableMovement(character)
 	if not character then return end
@@ -30,17 +35,26 @@ local function enableMovement(character)
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	local hrp = character:FindFirstChild("HumanoidRootPart")
 	
-	if not humanoid or not hrp then return end
+	if not humanoid then 
+		warn("[Client] No humanoid found!")
+		return 
+	end
+	if not hrp then
+		warn("[Client] No HumanoidRootPart found!")
+		return
+	end
 	
-	-- Unanchor everything
+	-- Unanchor HumanoidRootPart
 	hrp.Anchored = false
+	
+	-- Unanchor ALL parts
 	for _, part in ipairs(character:GetDescendants()) do
 		if part:IsA("BasePart") then
 			part.Anchored = false
 		end
 	end
 	
-	-- Enable movement
+	-- FORCE movement properties
 	humanoid.PlatformStand = false
 	humanoid.Sit = false
 	humanoid.AutoRotate = true
@@ -48,47 +62,91 @@ local function enableMovement(character)
 	humanoid.JumpPower = 50
 	humanoid.JumpHeight = 7.2
 	
-	-- Force state
-	if humanoid:GetState() ~= Enum.HumanoidStateType.Running then
+	-- Enable all humanoid states
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Running, true)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.RunningNoPhysics, true)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Landed, true)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, true)
+	
+	-- Disable states that freeze movement
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+	
+	-- Force to running state
+	local currentState = humanoid:GetState()
+	if currentState == Enum.HumanoidStateType.PlatformStanding or
+	   currentState == Enum.HumanoidStateType.Physics or
+	   currentState == Enum.HumanoidStateType.Seated then
 		humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
 	end
 end
 
 local function setupCharacterMovement(character)
-	character:WaitForChild("Humanoid", 10)
-	character:WaitForChild("HumanoidRootPart", 10)
+	local humanoid = character:WaitForChild("Humanoid", 10)
+	local hrp = character:WaitForChild("HumanoidRootPart", 10)
 	
-	-- Initial enable
-	task.wait(0.2)
+	if not humanoid or not hrp then
+		warn("[Client] Character missing Humanoid or HumanoidRootPart!")
+		return
+	end
+	
+	-- Initial enable after short delay
+	task.wait(0.3)
 	enableMovement(character)
-	print("[Client] Movement enabled")
 	
-	-- Keep enabling for 5 seconds to override other scripts
+	-- Log current state
+	print("[Client] Movement enabled. Humanoid state: " .. tostring(humanoid:GetState()))
+	print("[Client] WalkSpeed: " .. humanoid.WalkSpeed .. " | PlatformStand: " .. tostring(humanoid.PlatformStand))
+	
+	-- Keep enabling for 10 seconds to override other scripts
 	task.spawn(function()
-		for i = 1, 50 do
+		for i = 1, 100 do
 			task.wait(0.1)
+			enableMovement(character)
+		end
+		print("[Client] Movement enabler finished 10 second cycle")
+	end)
+	
+	-- Watch for state changes
+	humanoid.StateChanged:Connect(function(old, new)
+		print("[Client] State changed: " .. tostring(old) .. " -> " .. tostring(new))
+		if new == Enum.HumanoidStateType.PlatformStanding or
+		   new == Enum.HumanoidStateType.Physics or
+		   new == Enum.HumanoidStateType.Seated then
+			task.wait(0.05)
 			enableMovement(character)
 		end
 	end)
 	
-	-- Fix bad states
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if humanoid then
-		humanoid.StateChanged:Connect(function(old, new)
-			if new == Enum.HumanoidStateType.PlatformStanding or
-			   new == Enum.HumanoidStateType.Physics then
-				task.wait(0.1)
-				enableMovement(character)
-			end
-		end)
-	end
+	-- Watch for property changes
+	humanoid:GetPropertyChangedSignal("PlatformStand"):Connect(function()
+		if humanoid.PlatformStand then
+			humanoid.PlatformStand = false
+			print("[Client] Blocked PlatformStand = true")
+		end
+	end)
+	
+	humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+		if humanoid.WalkSpeed == 0 then
+			humanoid.WalkSpeed = 16
+			print("[Client] Blocked WalkSpeed = 0")
+		end
+	end)
 end
 
 -- Setup movement for current and future characters
 if player.Character then
-	setupCharacterMovement(player.Character)
+	task.spawn(function()
+		setupCharacterMovement(player.Character)
+	end)
 end
-player.CharacterAdded:Connect(setupCharacterMovement)
+player.CharacterAdded:Connect(function(char)
+	task.spawn(function()
+		setupCharacterMovement(char)
+	end)
+end)
 
 ---------------------------------------
 -- SIMPLE HUD (since StarterGui not syncing)
