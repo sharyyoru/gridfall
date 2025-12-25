@@ -71,9 +71,9 @@ local hudScreen = nil
 local inventoryScreen = nil
 
 ---------------------------------------
--- CAMERA SYSTEM (zoom-based, not ViewModel)
+-- CAMERA SYSTEM (aggressive enforcement)
 ---------------------------------------
-local TPP_MIN_ZOOM = 10
+local TPP_MIN_ZOOM = 8
 local TPP_MAX_ZOOM = 20
 local FPP_MIN_ZOOM = 0.5
 local FPP_MAX_ZOOM = 0.5
@@ -84,16 +84,33 @@ local function setCameraMode(mode)
 	if mode == "FPP" then
 		player.CameraMinZoomDistance = FPP_MIN_ZOOM
 		player.CameraMaxZoomDistance = FPP_MAX_ZOOM
+		player.CameraMode = Enum.CameraMode.Classic
 		print("[Camera] Switched to FPP")
 	else
 		player.CameraMinZoomDistance = TPP_MIN_ZOOM
 		player.CameraMaxZoomDistance = TPP_MAX_ZOOM
+		player.CameraMode = Enum.CameraMode.Classic
+		-- Force camera to zoom out
+		local camera = workspace.CurrentCamera
+		if camera and player.Character then
+			local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+			if hrp then
+				-- Move camera back to TPP distance
+				local lookDir = camera.CFrame.LookVector
+				camera.CFrame = CFrame.new(hrp.Position - lookDir * TPP_MIN_ZOOM, hrp.Position)
+			end
+		end
 		print("[Camera] Switched to TPP")
 	end
 end
 
--- Continuously enforce camera mode (Blaster system keeps overriding)
+-- Continuously enforce camera settings (Blaster keeps overriding)
 RunService.RenderStepped:Connect(function()
+	-- Always enforce CameraMode to Classic (not LockFirstPerson)
+	if player.CameraMode ~= Enum.CameraMode.Classic then
+		player.CameraMode = Enum.CameraMode.Classic
+	end
+	
 	if currentCameraMode == "TPP" then
 		if player.CameraMinZoomDistance < TPP_MIN_ZOOM then
 			player.CameraMinZoomDistance = TPP_MIN_ZOOM
@@ -104,22 +121,26 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
--- Start in TPP
-task.spawn(function()
-	if not player.Character then
-		player.CharacterAdded:Wait()
-	end
-	task.wait(1)
+-- Start in TPP after character loads
+local function initCamera()
+	task.wait(0.5)
 	setCameraMode("TPP")
 	print("[Camera] Initial TPP mode set")
+end
+
+if player.Character then
+	task.spawn(initCamera)
+end
+player.CharacterAdded:Connect(function()
+	task.spawn(initCamera)
 end)
 
 ---------------------------------------
--- MOVEMENT SYSTEM (BodyVelocity - proven to work)
+-- MOVEMENT SYSTEM (native Roblox + manual input tracking)
 ---------------------------------------
 local keysDown = { W = false, A = false, S = false, D = false, Space = false }
-local WALK_SPEED = 20
-local currentMover = nil
+local WALK_SPEED = 18
+local JUMP_POWER = 60 -- Higher than default 50 for better jumps
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	-- ALWAYS track movement keys regardless of gameProcessed
@@ -138,46 +159,45 @@ UserInputService.InputEnded:Connect(function(input)
 	if input.KeyCode == Enum.KeyCode.Space then keysDown.Space = false end
 end)
 
-local function setupMovement(character)
+local function setupCharacterMovement(character)
 	local humanoid = character:WaitForChild("Humanoid", 10)
-	local hrp = character:WaitForChild("HumanoidRootPart", 10)
-	if not humanoid or not hrp then return end
+	if not humanoid then return end
 	
-	-- Remove old mover if exists
-	local oldMover = hrp:FindFirstChild("GridfallMover")
-	if oldMover then oldMover:Destroy() end
+	-- Set movement properties
+	humanoid.WalkSpeed = WALK_SPEED
+	humanoid.JumpPower = JUMP_POWER
+	humanoid.JumpHeight = 0 -- Use JumpPower instead
 	
-	-- Create BodyVelocity for movement
-	local mover = Instance.new("BodyVelocity")
-	mover.Name = "GridfallMover"
-	mover.MaxForce = Vector3.new(50000, 0, 50000) -- Horizontal only, let physics handle Y
-	mover.Velocity = Vector3.new(0, 0, 0)
-	mover.P = 5000 -- Lower P for smoother feel
-	mover.Parent = hrp
-	currentMover = mover
+	-- Ensure humanoid is in proper state
+	humanoid.PlatformStand = false
+	humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
 	
-	print("[Movement] BodyVelocity created")
+	print("[Movement] Character setup complete - WalkSpeed:", WALK_SPEED, "JumpPower:", JUMP_POWER)
 end
 
 -- Setup for characters
 if player.Character then
-	task.spawn(function() setupMovement(player.Character) end)
+	task.spawn(function() setupCharacterMovement(player.Character) end)
 end
 player.CharacterAdded:Connect(function(char)
-	task.spawn(function() setupMovement(char) end)
+	task.spawn(function() setupCharacterMovement(char) end)
 end)
 
--- Movement update loop
+-- Movement update loop - use humanoid:Move for natural physics (slopes, etc)
 RunService.Heartbeat:Connect(function()
 	local character = player.Character
 	if not character then return end
 	
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	local hrp = character:FindFirstChild("HumanoidRootPart")
-	if not humanoid or not hrp then return end
+	if not humanoid then return end
 	
-	local mover = hrp:FindFirstChild("GridfallMover")
-	if not mover then return end
+	-- Continuously enforce movement properties
+	if humanoid.WalkSpeed ~= WALK_SPEED then
+		humanoid.WalkSpeed = WALK_SPEED
+	end
+	if humanoid.JumpPower ~= JUMP_POWER then
+		humanoid.JumpPower = JUMP_POWER
+	end
 	
 	-- Calculate movement direction
 	local direction = Vector3.new(0, 0, 0)
@@ -196,18 +216,18 @@ RunService.Heartbeat:Connect(function()
 		if camRight.Magnitude > 0 then camRight = camRight.Unit end
 		
 		local worldDir = (camLook * -direction.Z) + (camRight * direction.X)
-		mover.Velocity = worldDir * WALK_SPEED
+		humanoid:Move(worldDir, false)
 	else
-		mover.Velocity = Vector3.new(0, 0, 0)
+		humanoid:Move(Vector3.zero, false)
 	end
 	
-	-- Jump - use humanoid's natural jump
-	if keysDown.Space and humanoid.FloorMaterial ~= Enum.Material.Air then
+	-- Jump
+	if keysDown.Space then
 		humanoid.Jump = true
 	end
 end)
 
-print("[Client] BodyVelocity movement system active")
+print("[Client] Native movement system active")
 
 ---------------------------------------
 -- WEAPON SYSTEM
