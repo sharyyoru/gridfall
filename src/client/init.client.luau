@@ -38,40 +38,10 @@ end
 -- Try to disable Blaster
 pcall(disableBlasterScripts)
 
--- CONTINUOUS unbind of ALL bound actions except essential ones
-local essentialActions = {
-	["BlockWeaponFire"] = true,
-	["PlayerModule"] = true,
-}
-
-local function unbindNonEssentialActions()
-	local boundActions = ContextActionService:GetAllBoundActionInfo()
-	local unbound = {}
-	for actionName, _ in pairs(boundActions) do
-		if not essentialActions[actionName] and not string.find(actionName, "Gridfall") then
-			pcall(function()
-				ContextActionService:UnbindAction(actionName)
-				table.insert(unbound, actionName)
-			end)
-		end
-	end
-	if #unbound > 0 then
-		print("[Client] Unbound actions:", table.concat(unbound, ", "))
-	end
-end
-
--- Run continuously every frame for first 3 seconds, then every second
-task.spawn(function()
-	local startTime = tick()
-	while true do
-		unbindNonEssentialActions()
-		if tick() - startTime < 3 then
-			task.wait() -- Every frame for first 3 seconds
-		else
-			task.wait(1) -- Then every second
-		end
-	end
-end)
+-- DO NOT unbind Roblox's essential movement/camera actions!
+-- We were accidentally unbinding WASD controls before.
+-- Instead, just don't interfere with ContextActionService at all.
+print("[Client] Keeping all ContextActionService bindings intact")
 
 ---------------------------------------
 -- MENU MANAGER (global menu state for blocking inputs)
