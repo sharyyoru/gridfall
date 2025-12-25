@@ -145,47 +145,54 @@ player.CharacterAdded:Connect(function()
 end)
 
 ---------------------------------------
--- MOVEMENT SYSTEM (ContextActionService with HIGH priority)
+-- MOVEMENT SYSTEM (Let Roblox handle it, just set properties)
 ---------------------------------------
-local keysDown = { W = false, A = false, S = false, D = false, Space = false }
 local WALK_SPEED = 18
 local JUMP_POWER = 60
-
--- Use ContextActionService to OVERRIDE Blaster's input handling
-local function handleMovementInput(actionName, inputState, inputObject)
-	local isDown = (inputState == Enum.UserInputState.Begin)
-	
-	if actionName == "GridfallMoveForward" then
-		keysDown.W = isDown
-	elseif actionName == "GridfallMoveBackward" then
-		keysDown.S = isDown
-	elseif actionName == "GridfallMoveLeft" then
-		keysDown.A = isDown
-	elseif actionName == "GridfallMoveRight" then
-		keysDown.D = isDown
-	elseif actionName == "GridfallJump" then
-		keysDown.Space = isDown
-	end
-	
-	return Enum.ContextActionResult.Pass -- Let other systems also see the input
-end
-
--- Bind at VERY HIGH priority (10000) to run before Blaster system
-ContextActionService:BindActionAtPriority("GridfallMoveForward", handleMovementInput, false, 10000, Enum.KeyCode.W)
-ContextActionService:BindActionAtPriority("GridfallMoveBackward", handleMovementInput, false, 10000, Enum.KeyCode.S)
-ContextActionService:BindActionAtPriority("GridfallMoveLeft", handleMovementInput, false, 10000, Enum.KeyCode.A)
-ContextActionService:BindActionAtPriority("GridfallMoveRight", handleMovementInput, false, 10000, Enum.KeyCode.D)
-ContextActionService:BindActionAtPriority("GridfallJump", handleMovementInput, false, 10000, Enum.KeyCode.Space)
 
 local function setupCharacterMovement(character)
 	local humanoid = character:WaitForChild("Humanoid", 10)
 	if not humanoid then return end
 	
+	-- Set properties
 	humanoid.WalkSpeed = WALK_SPEED
 	humanoid.JumpPower = JUMP_POWER
 	humanoid.JumpHeight = 0
 	humanoid.PlatformStand = false
+	humanoid.AutoRotate = true
+	
+	-- Enable all movement states
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Running, true)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.RunningNoPhysics, true)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Landed, true)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, true)
+	
 	humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+	
+	-- Enable Roblox's default controls via PlayerModule
+	task.delay(0.5, function()
+		local playerScripts = player:FindFirstChild("PlayerScripts")
+		if playerScripts then
+			local playerModule = playerScripts:FindFirstChild("PlayerModule")
+			if playerModule then
+				local ok, result = pcall(function()
+					local module = require(playerModule)
+					local controls = module:GetControls()
+					if controls then
+						controls:Enable(true)
+						print("[Movement] PlayerModule controls ENABLED")
+					end
+				end)
+				if not ok then
+					warn("[Movement] PlayerModule error:", result)
+				end
+			else
+				print("[Movement] PlayerModule not found - using default controls")
+			end
+		end
+	end)
 	
 	print("[Movement] Character setup - WalkSpeed:", WALK_SPEED, "JumpPower:", JUMP_POWER)
 end
@@ -197,7 +204,7 @@ player.CharacterAdded:Connect(function(char)
 	task.spawn(function() setupCharacterMovement(char) end)
 end)
 
--- Movement update loop
+-- Just enforce properties, don't intercept input
 RunService.Heartbeat:Connect(function()
 	local character = player.Character
 	if not character then return end
@@ -205,39 +212,19 @@ RunService.Heartbeat:Connect(function()
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then return end
 	
-	-- Enforce movement properties
-	humanoid.WalkSpeed = WALK_SPEED
-	humanoid.JumpPower = JUMP_POWER
-	
-	-- Calculate movement direction
-	local direction = Vector3.new(0, 0, 0)
-	if keysDown.W then direction = direction + Vector3.new(0, 0, -1) end
-	if keysDown.S then direction = direction + Vector3.new(0, 0, 1) end
-	if keysDown.A then direction = direction + Vector3.new(-1, 0, 0) end
-	if keysDown.D then direction = direction + Vector3.new(1, 0, 0) end
-	
-	if direction.Magnitude > 0 then
-		direction = direction.Unit
-		local camera = workspace.CurrentCamera
-		local camLook = Vector3.new(camera.CFrame.LookVector.X, 0, camera.CFrame.LookVector.Z)
-		local camRight = Vector3.new(camera.CFrame.RightVector.X, 0, camera.CFrame.RightVector.Z)
-		
-		if camLook.Magnitude > 0 then camLook = camLook.Unit end
-		if camRight.Magnitude > 0 then camRight = camRight.Unit end
-		
-		local worldDir = (camLook * -direction.Z) + (camRight * direction.X)
-		humanoid:Move(worldDir, false)
-	else
-		humanoid:Move(Vector3.zero, false)
+	-- Enforce movement properties every frame
+	if humanoid.WalkSpeed ~= WALK_SPEED then
+		humanoid.WalkSpeed = WALK_SPEED
 	end
-	
-	-- Jump
-	if keysDown.Space then
-		humanoid.Jump = true
+	if humanoid.JumpPower ~= JUMP_POWER then
+		humanoid.JumpPower = JUMP_POWER
+	end
+	if humanoid.PlatformStand then
+		humanoid.PlatformStand = false
 	end
 end)
 
-print("[Client] ContextActionService movement active (priority 10000)")
+print("[Client] Movement system ready - using Roblox default controls")
 
 ---------------------------------------
 -- WEAPON SYSTEM
