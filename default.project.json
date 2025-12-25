@@ -9,6 +9,9 @@
       },
       "Assets": {
         "$path": "src/assets"
+      },
+      "Blaster": {
+        "$path": "src/blaster"
       }
     },
 
