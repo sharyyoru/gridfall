@@ -172,86 +172,73 @@ player.CharacterAdded:Connect(function()
 end)
 
 ---------------------------------------
--- MOVEMENT SYSTEM (Let Roblox handle it, just set properties)
+-- MOVEMENT SYSTEM (DIRECT PHYSICS - bypasses all input systems)
 ---------------------------------------
-local WALK_SPEED = 18
-local JUMP_POWER = 60
+local MOVE_SPEED = 20
+local JUMP_VELOCITY = 50
+local moveKeys = {W = false, A = false, S = false, D = false, Space = false}
 
-local function setupCharacterMovement(character)
-	local humanoid = character:WaitForChild("Humanoid", 10)
-	if not humanoid then return end
-	
-	-- Set properties
-	humanoid.WalkSpeed = WALK_SPEED
-	humanoid.JumpPower = JUMP_POWER
-	humanoid.JumpHeight = 0
-	humanoid.PlatformStand = false
-	humanoid.AutoRotate = true
-	
-	-- Enable all movement states
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.Running, true)
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.RunningNoPhysics, true)
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.Landed, true)
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, true)
-	
-	humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-	
-	-- Enable Roblox's default controls via PlayerModule
-	task.delay(0.5, function()
-		local playerScripts = player:FindFirstChild("PlayerScripts")
-		if playerScripts then
-			local playerModule = playerScripts:FindFirstChild("PlayerModule")
-			if playerModule then
-				local ok, result = pcall(function()
-					local module = require(playerModule)
-					local controls = module:GetControls()
-					if controls then
-						controls:Enable(true)
-						print("[Movement] PlayerModule controls ENABLED")
-					end
-				end)
-				if not ok then
-					warn("[Movement] PlayerModule error:", result)
-				end
-			else
-				print("[Movement] PlayerModule not found - using default controls")
-			end
-		end
-	end)
-	
-	print("[Movement] Character setup - WalkSpeed:", WALK_SPEED, "JumpPower:", JUMP_POWER)
-end
-
-if player.Character then
-	task.spawn(function() setupCharacterMovement(player.Character) end)
-end
-player.CharacterAdded:Connect(function(char)
-	task.spawn(function() setupCharacterMovement(char) end)
+-- Track key states with GetKeysPressed (cannot be blocked)
+UserInputService.InputBegan:Connect(function(input, processed)
+	if input.KeyCode == Enum.KeyCode.W then moveKeys.W = true end
+	if input.KeyCode == Enum.KeyCode.A then moveKeys.A = true end
+	if input.KeyCode == Enum.KeyCode.S then moveKeys.S = true end
+	if input.KeyCode == Enum.KeyCode.D then moveKeys.D = true end
+	if input.KeyCode == Enum.KeyCode.Space then moveKeys.Space = true end
 end)
 
--- Just enforce properties, don't intercept input
-RunService.Heartbeat:Connect(function()
+UserInputService.InputEnded:Connect(function(input)
+	if input.KeyCode == Enum.KeyCode.W then moveKeys.W = false end
+	if input.KeyCode == Enum.KeyCode.A then moveKeys.A = false end
+	if input.KeyCode == Enum.KeyCode.S then moveKeys.S = false end
+	if input.KeyCode == Enum.KeyCode.D then moveKeys.D = false end
+	if input.KeyCode == Enum.KeyCode.Space then moveKeys.Space = false end
+end)
+
+-- DIRECT PHYSICS MOVEMENT - runs every frame
+RunService.Heartbeat:Connect(function(dt)
 	local character = player.Character
 	if not character then return end
 	
+	local hrp = character:FindFirstChild("HumanoidRootPart")
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if not humanoid then return end
+	if not hrp or not humanoid then return end
 	
-	-- Enforce movement properties every frame
-	if humanoid.WalkSpeed ~= WALK_SPEED then
-		humanoid.WalkSpeed = WALK_SPEED
+	-- Keep humanoid functional
+	humanoid.PlatformStand = false
+	humanoid.WalkSpeed = 16
+	humanoid.JumpPower = JUMP_VELOCITY
+	
+	-- Calculate movement direction from camera
+	local camera = workspace.CurrentCamera
+	local camCF = camera.CFrame
+	local forward = Vector3.new(camCF.LookVector.X, 0, camCF.LookVector.Z).Unit
+	local right = Vector3.new(camCF.RightVector.X, 0, camCF.RightVector.Z).Unit
+	
+	local moveDir = Vector3.zero
+	if moveKeys.W then moveDir = moveDir + forward end
+	if moveKeys.S then moveDir = moveDir - forward end
+	if moveKeys.D then moveDir = moveDir + right end
+	if moveKeys.A then moveDir = moveDir - right end
+	
+	-- Apply movement via AssemblyLinearVelocity (DIRECT PHYSICS)
+	if moveDir.Magnitude > 0 then
+		moveDir = moveDir.Unit
+		local currentY = hrp.AssemblyLinearVelocity.Y
+		hrp.AssemblyLinearVelocity = Vector3.new(moveDir.X * MOVE_SPEED, currentY, moveDir.Z * MOVE_SPEED)
 	end
-	if humanoid.JumpPower ~= JUMP_POWER then
-		humanoid.JumpPower = JUMP_POWER
-	end
-	if humanoid.PlatformStand then
-		humanoid.PlatformStand = false
+	
+	-- Jump
+	if moveKeys.Space and humanoid.FloorMaterial ~= Enum.Material.Air then
+		hrp.AssemblyLinearVelocity = Vector3.new(
+			hrp.AssemblyLinearVelocity.X,
+			JUMP_VELOCITY,
+			hrp.AssemblyLinearVelocity.Z
+		)
 	end
 end)
 
-print("[Client] Movement system ready - using Roblox default controls")
+print("[Client] DIRECT PHYSICS movement system active")
 
 ---------------------------------------
 -- VIEWMODEL ARMS FIX (replace grey arms with player avatar arms)
