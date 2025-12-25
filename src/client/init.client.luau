@@ -27,12 +27,14 @@ local inventoryScreen = nil
 ---------------------------------------
 -- CAMERA SYSTEM (zoom-based, not ViewModel)
 ---------------------------------------
-local TPP_MIN_ZOOM = 8
-local TPP_MAX_ZOOM = 15
+local TPP_MIN_ZOOM = 10
+local TPP_MAX_ZOOM = 20
 local FPP_MIN_ZOOM = 0.5
 local FPP_MAX_ZOOM = 0.5
+local currentCameraMode = "TPP"
 
 local function setCameraMode(mode)
+	currentCameraMode = mode
 	if mode == "FPP" then
 		player.CameraMinZoomDistance = FPP_MIN_ZOOM
 		player.CameraMaxZoomDistance = FPP_MAX_ZOOM
@@ -44,22 +46,32 @@ local function setCameraMode(mode)
 	end
 end
 
--- Start in TPP (wait for character to load first)
+-- Continuously enforce camera mode (Blaster system keeps overriding)
+RunService.RenderStepped:Connect(function()
+	if currentCameraMode == "TPP" then
+		if player.CameraMinZoomDistance < TPP_MIN_ZOOM then
+			player.CameraMinZoomDistance = TPP_MIN_ZOOM
+		end
+		if player.CameraMaxZoomDistance < TPP_MAX_ZOOM then
+			player.CameraMaxZoomDistance = TPP_MAX_ZOOM
+		end
+	end
+end)
+
+-- Start in TPP
 task.spawn(function()
 	if not player.Character then
 		player.CharacterAdded:Wait()
 	end
-	task.wait(0.5) -- Wait for camera to initialize
+	task.wait(1)
 	setCameraMode("TPP")
 	print("[Camera] Initial TPP mode set")
 end)
 
 ---------------------------------------
--- FORCE MOVEMENT USING VELOCITY (bypasses Blaster's humanoid:Move override)
+-- NATURAL MOVEMENT (uses humanoid:Move, physics-friendly)
 ---------------------------------------
 local keysDown = { W = false, A = false, S = false, D = false, Space = false }
-local WALK_SPEED = 16
-local JUMP_POWER = 50
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	-- ALWAYS track movement keys regardless of gameProcessed
@@ -78,82 +90,51 @@ UserInputService.InputEnded:Connect(function(input)
 	if input.KeyCode == Enum.KeyCode.Space then keysDown.Space = false end
 end)
 
-local function setupMovementForCharacter(character)
-	local humanoid = character:WaitForChild("Humanoid", 10)
-	local hrp = character:WaitForChild("HumanoidRootPart", 10)
+-- Movement loop using humanoid:Move (natural physics)
+RunService.Heartbeat:Connect(function()
+	local character = player.Character
+	if not character then return end
+	
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local hrp = character:FindFirstChild("HumanoidRootPart")
 	if not humanoid or not hrp then return end
 	
-	-- Create a BodyVelocity for horizontal movement
-	local bodyVel = Instance.new("BodyVelocity")
-	bodyVel.Name = "GridfallMover"
-	bodyVel.MaxForce = Vector3.new(math.huge, 0, math.huge) -- Only horizontal
-	bodyVel.Velocity = Vector3.new(0, 0, 0)
-	bodyVel.P = 10000
-	bodyVel.Parent = hrp
+	-- Ensure humanoid can move
+	humanoid.WalkSpeed = 16
+	humanoid.JumpPower = 50
 	
-	print("[Movement] BodyVelocity created for " .. player.Name)
+	-- Calculate movement direction
+	local direction = Vector3.new(0, 0, 0)
+	if keysDown.W then direction = direction + Vector3.new(0, 0, -1) end
+	if keysDown.S then direction = direction + Vector3.new(0, 0, 1) end
+	if keysDown.A then direction = direction + Vector3.new(-1, 0, 0) end
+	if keysDown.D then direction = direction + Vector3.new(1, 0, 0) end
 	
-	-- Movement update loop
-	local connection
-	connection = RunService.Heartbeat:Connect(function()
-		if not character or not character.Parent then
-			connection:Disconnect()
-			return
-		end
+	if direction.Magnitude > 0 then
+		direction = direction.Unit
+		local camera = workspace.CurrentCamera
+		local camLook = Vector3.new(camera.CFrame.LookVector.X, 0, camera.CFrame.LookVector.Z)
+		local camRight = Vector3.new(camera.CFrame.RightVector.X, 0, camera.CFrame.RightVector.Z)
 		
-		if not hrp or not hrp.Parent then
-			connection:Disconnect()
-			return
-		end
+		if camLook.Magnitude > 0 then camLook = camLook.Unit end
+		if camRight.Magnitude > 0 then camRight = camRight.Unit end
 		
-		-- Calculate movement direction
-		local direction = Vector3.new(0, 0, 0)
-		if keysDown.W then direction = direction + Vector3.new(0, 0, -1) end
-		if keysDown.S then direction = direction + Vector3.new(0, 0, 1) end
-		if keysDown.A then direction = direction + Vector3.new(-1, 0, 0) end
-		if keysDown.D then direction = direction + Vector3.new(1, 0, 0) end
-		
-		if direction.Magnitude > 0 then
-			direction = direction.Unit
-			local camera = workspace.CurrentCamera
-			local camLook = Vector3.new(camera.CFrame.LookVector.X, 0, camera.CFrame.LookVector.Z)
-			local camRight = Vector3.new(camera.CFrame.RightVector.X, 0, camera.CFrame.RightVector.Z)
-			
-			if camLook.Magnitude > 0 then camLook = camLook.Unit end
-			if camRight.Magnitude > 0 then camRight = camRight.Unit end
-			
-			local worldDir = (camLook * -direction.Z) + (camRight * direction.X)
-			bodyVel.Velocity = worldDir * WALK_SPEED
-			
-			-- Rotate character to face movement direction
-			local targetCF = CFrame.lookAt(hrp.Position, hrp.Position + worldDir)
-			hrp.CFrame = hrp.CFrame:Lerp(targetCF, 0.2)
-		else
-			bodyVel.Velocity = Vector3.new(0, 0, 0)
+		local worldDir = (camLook * -direction.Z) + (camRight * direction.X)
+		humanoid:Move(worldDir, false)
+	else
+		humanoid:Move(Vector3.new(0, 0, 0), false)
+	end
+	
+	-- Jump
+	if keysDown.Space then
+		if humanoid:GetState() ~= Enum.HumanoidStateType.Jumping and
+		   humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
+			humanoid.Jump = true
 		end
-		
-		-- Jump
-		if keysDown.Space and humanoid.FloorMaterial ~= Enum.Material.Air then
-			humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-		end
-	end)
-end
-
--- Setup for current character
-if player.Character then
-	task.spawn(function()
-		setupMovementForCharacter(player.Character)
-	end)
-end
-
--- Setup for future characters
-player.CharacterAdded:Connect(function(char)
-	task.spawn(function()
-		setupMovementForCharacter(char)
-	end)
+	end
 end)
 
-print("[Client] BodyVelocity movement system active")
+print("[Client] Natural movement system active")
 
 ---------------------------------------
 -- WEAPON SYSTEM
@@ -453,17 +434,16 @@ local function toggleInventory()
 		end
 	end
 	
-	-- Enable/disable mouse cursor for menu navigation
+	print("[Inventory] " .. (isInventoryOpen and "OPENED" or "CLOSED"))
+end
+
+-- Continuously enforce mouse state based on inventory
+RunService.RenderStepped:Connect(function()
 	if isInventoryOpen then
 		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 		UserInputService.MouseIconEnabled = true
-	else
-		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
-		UserInputService.MouseIconEnabled = false
 	end
-	
-	print("[Inventory] " .. (isInventoryOpen and "OPENED" or "CLOSED"))
-end
+end)
 
 ---------------------------------------
 -- INPUT HANDLING
