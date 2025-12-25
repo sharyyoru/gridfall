@@ -7,6 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local ContextActionService = game:GetService("ContextActionService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -14,6 +15,51 @@ local playerGui = player:WaitForChild("PlayerGui")
 -- DISABLE ALL ROBLOX DEFAULT UIS
 StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
+
+---------------------------------------
+-- MENU MANAGER (global menu state for blocking inputs)
+---------------------------------------
+local MenuManager = {
+	_openMenus = {},
+	_isAnyMenuOpen = false
+}
+
+function MenuManager:OpenMenu(menuName)
+	self._openMenus[menuName] = true
+	self._isAnyMenuOpen = true
+	self:_updateInputBlocking()
+end
+
+function MenuManager:CloseMenu(menuName)
+	self._openMenus[menuName] = nil
+	self._isAnyMenuOpen = next(self._openMenus) ~= nil
+	self:_updateInputBlocking()
+end
+
+function MenuManager:IsAnyMenuOpen()
+	return self._isAnyMenuOpen
+end
+
+function MenuManager:_updateInputBlocking()
+	if self._isAnyMenuOpen then
+		-- Block weapon firing by sinking mouse input
+		ContextActionService:BindActionAtPriority(
+			"BlockWeaponFire",
+			function() return Enum.ContextActionResult.Sink end,
+			false,
+			3000, -- High priority to override Blaster
+			Enum.UserInputType.MouseButton1,
+			Enum.UserInputType.MouseButton2
+		)
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		UserInputService.MouseIconEnabled = true
+	else
+		ContextActionService:UnbindAction("BlockWeaponFire")
+	end
+end
+
+-- Make MenuManager globally accessible
+_G.GridfallMenuManager = MenuManager
 
 ---------------------------------------
 -- STATE
@@ -69,9 +115,11 @@ task.spawn(function()
 end)
 
 ---------------------------------------
--- NATURAL MOVEMENT (uses humanoid:Move, physics-friendly)
+-- MOVEMENT SYSTEM (BodyVelocity - proven to work)
 ---------------------------------------
 local keysDown = { W = false, A = false, S = false, D = false, Space = false }
+local WALK_SPEED = 20
+local currentMover = nil
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	-- ALWAYS track movement keys regardless of gameProcessed
@@ -90,7 +138,36 @@ UserInputService.InputEnded:Connect(function(input)
 	if input.KeyCode == Enum.KeyCode.Space then keysDown.Space = false end
 end)
 
--- Movement loop using humanoid:Move (natural physics)
+local function setupMovement(character)
+	local humanoid = character:WaitForChild("Humanoid", 10)
+	local hrp = character:WaitForChild("HumanoidRootPart", 10)
+	if not humanoid or not hrp then return end
+	
+	-- Remove old mover if exists
+	local oldMover = hrp:FindFirstChild("GridfallMover")
+	if oldMover then oldMover:Destroy() end
+	
+	-- Create BodyVelocity for movement
+	local mover = Instance.new("BodyVelocity")
+	mover.Name = "GridfallMover"
+	mover.MaxForce = Vector3.new(50000, 0, 50000) -- Horizontal only, let physics handle Y
+	mover.Velocity = Vector3.new(0, 0, 0)
+	mover.P = 5000 -- Lower P for smoother feel
+	mover.Parent = hrp
+	currentMover = mover
+	
+	print("[Movement] BodyVelocity created")
+end
+
+-- Setup for characters
+if player.Character then
+	task.spawn(function() setupMovement(player.Character) end)
+end
+player.CharacterAdded:Connect(function(char)
+	task.spawn(function() setupMovement(char) end)
+end)
+
+-- Movement update loop
 RunService.Heartbeat:Connect(function()
 	local character = player.Character
 	if not character then return end
@@ -99,9 +176,8 @@ RunService.Heartbeat:Connect(function()
 	local hrp = character:FindFirstChild("HumanoidRootPart")
 	if not humanoid or not hrp then return end
 	
-	-- Ensure humanoid can move
-	humanoid.WalkSpeed = 16
-	humanoid.JumpPower = 50
+	local mover = hrp:FindFirstChild("GridfallMover")
+	if not mover then return end
 	
 	-- Calculate movement direction
 	local direction = Vector3.new(0, 0, 0)
@@ -120,21 +196,18 @@ RunService.Heartbeat:Connect(function()
 		if camRight.Magnitude > 0 then camRight = camRight.Unit end
 		
 		local worldDir = (camLook * -direction.Z) + (camRight * direction.X)
-		humanoid:Move(worldDir, false)
+		mover.Velocity = worldDir * WALK_SPEED
 	else
-		humanoid:Move(Vector3.new(0, 0, 0), false)
+		mover.Velocity = Vector3.new(0, 0, 0)
 	end
 	
-	-- Jump
-	if keysDown.Space then
-		if humanoid:GetState() ~= Enum.HumanoidStateType.Jumping and
-		   humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
-			humanoid.Jump = true
-		end
+	-- Jump - use humanoid's natural jump
+	if keysDown.Space and humanoid.FloorMaterial ~= Enum.Material.Air then
+		humanoid.Jump = true
 	end
 end)
 
-print("[Client] Natural movement system active")
+print("[Client] BodyVelocity movement system active")
 
 ---------------------------------------
 -- WEAPON SYSTEM
@@ -430,20 +503,15 @@ local function toggleInventory()
 			container.Visible = isInventoryOpen
 			if isInventoryOpen then
 				updateInventoryScreen()
+				MenuManager:OpenMenu("Inventory")
+			else
+				MenuManager:CloseMenu("Inventory")
 			end
 		end
 	end
 	
 	print("[Inventory] " .. (isInventoryOpen and "OPENED" or "CLOSED"))
 end
-
--- Continuously enforce mouse state based on inventory
-RunService.RenderStepped:Connect(function()
-	if isInventoryOpen then
-		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-		UserInputService.MouseIconEnabled = true
-	end
-end)
 
 ---------------------------------------
 -- INPUT HANDLING
