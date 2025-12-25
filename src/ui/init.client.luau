@@ -1,28 +1,30 @@
 -- Gridfall UI LocalScript
 -- Creates and manages all UI screens
 
+print("[UI] Starting UI initialization...")
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Wait for shared modules to load
-local Shared = ReplicatedStorage:WaitForChild("Shared", 10)
-if Shared then
-	Shared = require(Shared)
+-- Load UI components with error handling
+local success, err = pcall(function()
+	local HUDComponent = require(script:WaitForChild("HUD", 5))
+	local InventoryComponent = require(script:WaitForChild("Inventory", 5))
+	
+	-- Create HUD
+	local hudScreen = HUDComponent.Create(playerGui)
+	print("[UI] HUD created")
+	
+	-- Create Inventory Screen  
+	local inventoryScreen = InventoryComponent.Create(playerGui)
+	print("[UI] Inventory created")
+end)
+
+if not success then
+	warn("[UI] ERROR creating UI: " .. tostring(err))
+else
+	print("[UI] All UI components initialized successfully")
 end
-
--- UI Components
-local HUDComponent = require(script:WaitForChild("HUD"))
-local InventoryComponent = require(script:WaitForChild("Inventory"))
-
--- Create HUD
-local hudScreen = HUDComponent.Create(playerGui)
-print("[UI] HUD created")
-
--- Create Inventory Screen
-local inventoryScreen = InventoryComponent.Create(playerGui)
-print("[UI] Inventory created")
-
-print("[UI] All UI components initialized successfully")
