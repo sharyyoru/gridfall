@@ -10,13 +10,16 @@ local RunService = game:GetService("RunService")
 
 local GameModeDisabler = {}
 
--- Names of OUR scripts/folders to NOT disable
+-- Names of scripts/folders to NOT disable (ours + weapon system)
 local PROTECTED_NAMES = {
 	["Server"] = true,
 	["Shared"] = true,
 	["Remotes"] = true,
 	["Assets"] = true,
 	["GridfallUI"] = true,
+	["Blaster"] = true, -- KEEP the weapon system!
+	["Weapons"] = true,
+	["Tools"] = true,
 }
 
 function GameModeDisabler.DisableTeams()
@@ -27,30 +30,28 @@ function GameModeDisabler.DisableTeams()
 	print("[GameModeDisabler] Teams destroyed")
 end
 
-function GameModeDisabler.DisableAllExistingScripts()
-	-- Disable ALL scripts in ServerScriptService except our own
-	for _, child in ipairs(ServerScriptService:GetChildren()) do
-		if not PROTECTED_NAMES[child.Name] then
-			if child:IsA("Script") then
-				child.Disabled = true
-				print("[GameModeDisabler] Disabled: " .. child.Name)
-			elseif child:IsA("Folder") or child:IsA("ModuleScript") then
-				-- Disable all scripts inside
-				for _, desc in ipairs(child:GetDescendants()) do
-					if desc:IsA("Script") then
-						desc.Disabled = true
-						print("[GameModeDisabler] Disabled: " .. desc:GetFullName())
-					end
-				end
+function GameModeDisabler.DisableGameplayScripts()
+	-- Only disable Gameplay folder scripts (game mode, rounds, timer)
+	-- Keep Blaster scripts for weapons!
+	
+	local gameplay = ServerScriptService:FindFirstChild("Gameplay")
+	if gameplay then
+		for _, desc in ipairs(gameplay:GetDescendants()) do
+			if desc:IsA("Script") then
+				desc.Disabled = true
+				print("[GameModeDisabler] Disabled: " .. desc:GetFullName())
 			end
 		end
 	end
 	
-	-- Disable scripts in Workspace
-	for _, desc in ipairs(workspace:GetDescendants()) do
-		if desc:IsA("Script") and not PROTECTED_NAMES[desc.Name] then
-			desc.Disabled = true
-			print("[GameModeDisabler] Disabled workspace script: " .. desc.Name)
+	-- Also disable Gameplay scripts in ReplicatedStorage
+	local repGameplay = ReplicatedStorage:FindFirstChild("Gameplay")
+	if repGameplay then
+		for _, desc in ipairs(repGameplay:GetDescendants()) do
+			if desc:IsA("LocalScript") or desc:IsA("Script") then
+				desc.Disabled = true
+				print("[GameModeDisabler] Disabled: " .. desc:GetFullName())
+			end
 		end
 	end
 end
@@ -158,10 +159,10 @@ function GameModeDisabler.SetupCharacterFixer()
 end
 
 function GameModeDisabler.Init()
-	print("[GameModeDisabler] AGGRESSIVELY disabling existing game systems...")
+	print("[GameModeDisabler] Disabling game mode systems (keeping weapons)...")
 	
 	GameModeDisabler.DisableTeams()
-	GameModeDisabler.DisableAllExistingScripts()
+	GameModeDisabler.DisableGameplayScripts()
 	GameModeDisabler.DestroyAllExistingGuis()
 	GameModeDisabler.SetupCharacterFixer()
 	
