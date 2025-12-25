@@ -13,6 +13,7 @@ local Shared = require(ReplicatedStorage:WaitForChild("Shared"))
 local Constants = Shared.Constants
 
 -- Client modules
+local GUICleanup = require(script.GUICleanup)
 local CameraController = require(script.CameraController)
 local InputController = require(script.InputController)
 local UIController = require(script.UIController)
@@ -20,7 +21,8 @@ local UIController = require(script.UIController)
 -- Wait for remotes
 local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
 
--- Initialize systems
+-- Initialize systems (GUICleanup first to remove existing game UIs)
+GUICleanup.Init()
 CameraController.Init()
 InputController.Init()
 UIController.Init()
