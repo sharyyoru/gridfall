@@ -533,15 +533,26 @@ local function toggleInventory()
 		if container then
 			container.Visible = isInventoryOpen
 			if isInventoryOpen then
+				-- AUTO-UNEQUIP weapons and switch to TPP when menu opens
+				local character = player.Character
+				if character then
+					local humanoid = character:FindFirstChildOfClass("Humanoid")
+					if humanoid then
+						humanoid:UnequipTools()
+					end
+				end
+				currentEquippedSlot = 0
+				setCameraMode("TPP")
+				updateWeaponSlots()
 				updateInventoryScreen()
 				MenuManager:OpenMenu("Inventory")
+				print("[Inventory] OPENED - weapons unequipped, TPP mode")
 			else
 				MenuManager:CloseMenu("Inventory")
+				print("[Inventory] CLOSED")
 			end
 		end
 	end
-	
-	print("[Inventory] " .. (isInventoryOpen and "OPENED" or "CLOSED"))
 end
 
 ---------------------------------------
