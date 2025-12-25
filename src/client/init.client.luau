@@ -17,6 +17,38 @@ StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
 
 ---------------------------------------
+-- UNBIND BLASTER MOVEMENT ACTIONS (they sink WASD)
+---------------------------------------
+local function unbindBlasterActions()
+	-- Common action names the Blaster system might use
+	local actionsToUnbind = {
+		"moveForward", "moveBackward", "moveLeft", "moveRight",
+		"MoveForward", "MoveBackward", "MoveLeft", "MoveRight",
+		"Forward", "Backward", "Left", "Right",
+		"W", "A", "S", "D",
+		"Jump", "jump",
+		"BlasterMove", "BlasterInput",
+		"moveForwardAction", "moveBackwardAction", "moveLeftAction", "moveRightAction",
+	}
+	
+	for _, actionName in ipairs(actionsToUnbind) do
+		pcall(function()
+			ContextActionService:UnbindAction(actionName)
+		end)
+	end
+	print("[Client] Attempted to unbind Blaster movement actions")
+end
+
+-- Run immediately and repeatedly for first 5 seconds
+unbindBlasterActions()
+task.spawn(function()
+	for i = 1, 10 do
+		task.wait(0.5)
+		unbindBlasterActions()
+	end
+end)
+
+---------------------------------------
 -- MENU MANAGER (global menu state for blocking inputs)
 ---------------------------------------
 local MenuManager = {
