@@ -254,6 +254,54 @@ end)
 print("[Client] Movement system ready - using Roblox default controls")
 
 ---------------------------------------
+-- VIEWMODEL ARMS FIX (replace grey arms with player avatar arms)
+---------------------------------------
+local function replaceViewModelArms()
+	-- Find the ViewModel in workspace (Blaster system parents it there when equipped)
+	local viewModel = workspace:FindFirstChild("ViewModel", true)
+	if not viewModel then return end
+	
+	local character = player.Character
+	if not character then return end
+	
+	-- Get player's arm colors/properties from character
+	local leftArm = character:FindFirstChild("Left Arm") or character:FindFirstChild("LeftUpperArm")
+	local rightArm = character:FindFirstChild("Right Arm") or character:FindFirstChild("RightUpperArm")
+	
+	if not leftArm or not rightArm then return end
+	
+	-- Find ViewModel arms and copy player's appearance
+	for _, part in ipairs(viewModel:GetDescendants()) do
+		if part:IsA("BasePart") then
+			local partName = part.Name:lower()
+			if partName:find("left") and partName:find("arm") then
+				part.Color = leftArm.Color
+				part.Material = leftArm.Material
+			elseif partName:find("right") and partName:find("arm") then
+				part.Color = rightArm.Color
+				part.Material = rightArm.Material
+			elseif partName:find("arm") or partName:find("hand") then
+				-- Generic arm/hand part - use right arm color
+				part.Color = rightArm.Color
+				part.Material = rightArm.Material
+			end
+		end
+	end
+	
+	print("[ViewModel] Applied player arm colors to ViewModel")
+end
+
+-- Run arm replacement when character or workspace changes
+task.spawn(function()
+	while true do
+		task.wait(0.5)
+		if currentEquippedSlot > 0 then
+			replaceViewModelArms()
+		end
+	end
+end)
+
+---------------------------------------
 -- WEAPON SYSTEM
 ---------------------------------------
 local function getWeaponTools()
