@@ -85,17 +85,26 @@ local function setCameraMode(mode)
 		player.CameraMinZoomDistance = FPP_MIN_ZOOM
 		player.CameraMaxZoomDistance = FPP_MAX_ZOOM
 		player.CameraMode = Enum.CameraMode.Classic
+		-- Show crosshair in FPP
+		if hudScreen then
+			local crosshair = hudScreen:FindFirstChild("Crosshair")
+			if crosshair then crosshair.Visible = true end
+		end
 		print("[Camera] Switched to FPP")
 	else
 		player.CameraMinZoomDistance = TPP_MIN_ZOOM
 		player.CameraMaxZoomDistance = TPP_MAX_ZOOM
 		player.CameraMode = Enum.CameraMode.Classic
+		-- Hide crosshair in TPP
+		if hudScreen then
+			local crosshair = hudScreen:FindFirstChild("Crosshair")
+			if crosshair then crosshair.Visible = false end
+		end
 		-- Force camera to zoom out
 		local camera = workspace.CurrentCamera
 		if camera and player.Character then
 			local hrp = player.Character:FindFirstChild("HumanoidRootPart")
 			if hrp then
-				-- Move camera back to TPP distance
 				local lookDir = camera.CFrame.LookVector
 				camera.CFrame = CFrame.new(hrp.Position - lookDir * TPP_MIN_ZOOM, hrp.Position)
 			end
@@ -136,46 +145,51 @@ player.CharacterAdded:Connect(function()
 end)
 
 ---------------------------------------
--- MOVEMENT SYSTEM (native Roblox + manual input tracking)
+-- MOVEMENT SYSTEM (ContextActionService with HIGH priority)
 ---------------------------------------
 local keysDown = { W = false, A = false, S = false, D = false, Space = false }
 local WALK_SPEED = 18
-local JUMP_POWER = 60 -- Higher than default 50 for better jumps
+local JUMP_POWER = 60
 
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	-- ALWAYS track movement keys regardless of gameProcessed
-	if input.KeyCode == Enum.KeyCode.W then keysDown.W = true end
-	if input.KeyCode == Enum.KeyCode.A then keysDown.A = true end
-	if input.KeyCode == Enum.KeyCode.S then keysDown.S = true end
-	if input.KeyCode == Enum.KeyCode.D then keysDown.D = true end
-	if input.KeyCode == Enum.KeyCode.Space then keysDown.Space = true end
-end)
+-- Use ContextActionService to OVERRIDE Blaster's input handling
+local function handleMovementInput(actionName, inputState, inputObject)
+	local isDown = (inputState == Enum.UserInputState.Begin)
+	
+	if actionName == "GridfallMoveForward" then
+		keysDown.W = isDown
+	elseif actionName == "GridfallMoveBackward" then
+		keysDown.S = isDown
+	elseif actionName == "GridfallMoveLeft" then
+		keysDown.A = isDown
+	elseif actionName == "GridfallMoveRight" then
+		keysDown.D = isDown
+	elseif actionName == "GridfallJump" then
+		keysDown.Space = isDown
+	end
+	
+	return Enum.ContextActionResult.Pass -- Let other systems also see the input
+end
 
-UserInputService.InputEnded:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.W then keysDown.W = false end
-	if input.KeyCode == Enum.KeyCode.A then keysDown.A = false end
-	if input.KeyCode == Enum.KeyCode.S then keysDown.S = false end
-	if input.KeyCode == Enum.KeyCode.D then keysDown.D = false end
-	if input.KeyCode == Enum.KeyCode.Space then keysDown.Space = false end
-end)
+-- Bind at VERY HIGH priority (10000) to run before Blaster system
+ContextActionService:BindActionAtPriority("GridfallMoveForward", handleMovementInput, false, 10000, Enum.KeyCode.W)
+ContextActionService:BindActionAtPriority("GridfallMoveBackward", handleMovementInput, false, 10000, Enum.KeyCode.S)
+ContextActionService:BindActionAtPriority("GridfallMoveLeft", handleMovementInput, false, 10000, Enum.KeyCode.A)
+ContextActionService:BindActionAtPriority("GridfallMoveRight", handleMovementInput, false, 10000, Enum.KeyCode.D)
+ContextActionService:BindActionAtPriority("GridfallJump", handleMovementInput, false, 10000, Enum.KeyCode.Space)
 
 local function setupCharacterMovement(character)
 	local humanoid = character:WaitForChild("Humanoid", 10)
 	if not humanoid then return end
 	
-	-- Set movement properties
 	humanoid.WalkSpeed = WALK_SPEED
 	humanoid.JumpPower = JUMP_POWER
-	humanoid.JumpHeight = 0 -- Use JumpPower instead
-	
-	-- Ensure humanoid is in proper state
+	humanoid.JumpHeight = 0
 	humanoid.PlatformStand = false
 	humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
 	
-	print("[Movement] Character setup complete - WalkSpeed:", WALK_SPEED, "JumpPower:", JUMP_POWER)
+	print("[Movement] Character setup - WalkSpeed:", WALK_SPEED, "JumpPower:", JUMP_POWER)
 end
 
--- Setup for characters
 if player.Character then
 	task.spawn(function() setupCharacterMovement(player.Character) end)
 end
@@ -183,7 +197,7 @@ player.CharacterAdded:Connect(function(char)
 	task.spawn(function() setupCharacterMovement(char) end)
 end)
 
--- Movement update loop - use humanoid:Move for natural physics (slopes, etc)
+-- Movement update loop
 RunService.Heartbeat:Connect(function()
 	local character = player.Character
 	if not character then return end
@@ -191,13 +205,9 @@ RunService.Heartbeat:Connect(function()
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then return end
 	
-	-- Continuously enforce movement properties
-	if humanoid.WalkSpeed ~= WALK_SPEED then
-		humanoid.WalkSpeed = WALK_SPEED
-	end
-	if humanoid.JumpPower ~= JUMP_POWER then
-		humanoid.JumpPower = JUMP_POWER
-	end
+	-- Enforce movement properties
+	humanoid.WalkSpeed = WALK_SPEED
+	humanoid.JumpPower = JUMP_POWER
 	
 	-- Calculate movement direction
 	local direction = Vector3.new(0, 0, 0)
@@ -227,7 +237,7 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
-print("[Client] Native movement system active")
+print("[Client] ContextActionService movement active (priority 10000)")
 
 ---------------------------------------
 -- WEAPON SYSTEM
@@ -339,13 +349,14 @@ local function createHUD()
 	screen.DisplayOrder = 10
 	screen.Parent = playerGui
 	
-	-- Crosshair
+	-- Crosshair (hidden by default in TPP)
 	local crosshair = Instance.new("Frame")
 	crosshair.Name = "Crosshair"
 	crosshair.Size = UDim2.new(0, 4, 0, 4)
 	crosshair.Position = UDim2.new(0.5, -2, 0.5, -2)
 	crosshair.BackgroundColor3 = Color3.new(1, 1, 1)
 	crosshair.BorderSizePixel = 0
+	crosshair.Visible = false -- Hidden in TPP mode
 	crosshair.Parent = screen
 	Instance.new("UICorner", crosshair).CornerRadius = UDim.new(0, 2)
 	
