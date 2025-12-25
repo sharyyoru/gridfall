@@ -172,13 +172,13 @@ player.CharacterAdded:Connect(function()
 end)
 
 ---------------------------------------
--- MOVEMENT SYSTEM (DIRECT PHYSICS - bypasses all input systems)
+-- MOVEMENT SYSTEM (BodyVelocity constraint - cannot be overridden)
 ---------------------------------------
-local MOVE_SPEED = 20
-local JUMP_VELOCITY = 50
+local MOVE_SPEED = 22
+local JUMP_VELOCITY = 55
 local moveKeys = {W = false, A = false, S = false, D = false, Space = false}
+local bodyVelocity = nil
 
--- Track key states with GetKeysPressed (cannot be blocked)
 UserInputService.InputBegan:Connect(function(input, processed)
 	if input.KeyCode == Enum.KeyCode.W then moveKeys.W = true end
 	if input.KeyCode == Enum.KeyCode.A then moveKeys.A = true end
@@ -195,7 +195,34 @@ UserInputService.InputEnded:Connect(function(input)
 	if input.KeyCode == Enum.KeyCode.Space then moveKeys.Space = false end
 end)
 
--- DIRECT PHYSICS MOVEMENT - runs every frame
+local function setupBodyVelocity(character)
+	local hrp = character:WaitForChild("HumanoidRootPart", 10)
+	if not hrp then return end
+	
+	-- Remove any existing
+	local existing = hrp:FindFirstChild("GridfallMover")
+	if existing then existing:Destroy() end
+	
+	-- Create BodyVelocity (constraint that FORCES velocity)
+	local bv = Instance.new("BodyVelocity")
+	bv.Name = "GridfallMover"
+	bv.MaxForce = Vector3.new(math.huge, 0, math.huge) -- Infinite horizontal force
+	bv.Velocity = Vector3.zero
+	bv.P = 10000 -- High power
+	bv.Parent = hrp
+	bodyVelocity = bv
+	
+	print("[Movement] BodyVelocity constraint created")
+end
+
+if player.Character then
+	task.spawn(function() setupBodyVelocity(player.Character) end)
+end
+player.CharacterAdded:Connect(function(char)
+	task.spawn(function() setupBodyVelocity(char) end)
+end)
+
+-- Movement loop
 RunService.Heartbeat:Connect(function(dt)
 	local character = player.Character
 	if not character then return end
@@ -204,16 +231,26 @@ RunService.Heartbeat:Connect(function(dt)
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if not hrp or not humanoid then return end
 	
+	-- Ensure BodyVelocity exists
+	local bv = hrp:FindFirstChild("GridfallMover")
+	if not bv then
+		setupBodyVelocity(character)
+		return
+	end
+	
 	-- Keep humanoid functional
 	humanoid.PlatformStand = false
 	humanoid.WalkSpeed = 16
 	humanoid.JumpPower = JUMP_VELOCITY
+	hrp.Anchored = false
 	
-	-- Calculate movement direction from camera
+	-- Calculate movement direction
 	local camera = workspace.CurrentCamera
 	local camCF = camera.CFrame
-	local forward = Vector3.new(camCF.LookVector.X, 0, camCF.LookVector.Z).Unit
-	local right = Vector3.new(camCF.RightVector.X, 0, camCF.RightVector.Z).Unit
+	local forward = Vector3.new(camCF.LookVector.X, 0, camCF.LookVector.Z)
+	local right = Vector3.new(camCF.RightVector.X, 0, camCF.RightVector.Z)
+	if forward.Magnitude > 0 then forward = forward.Unit end
+	if right.Magnitude > 0 then right = right.Unit end
 	
 	local moveDir = Vector3.zero
 	if moveKeys.W then moveDir = moveDir + forward end
@@ -221,24 +258,21 @@ RunService.Heartbeat:Connect(function(dt)
 	if moveKeys.D then moveDir = moveDir + right end
 	if moveKeys.A then moveDir = moveDir - right end
 	
-	-- Apply movement via AssemblyLinearVelocity (DIRECT PHYSICS)
+	-- Set BodyVelocity (this FORCES the velocity, cannot be overridden)
 	if moveDir.Magnitude > 0 then
-		moveDir = moveDir.Unit
-		local currentY = hrp.AssemblyLinearVelocity.Y
-		hrp.AssemblyLinearVelocity = Vector3.new(moveDir.X * MOVE_SPEED, currentY, moveDir.Z * MOVE_SPEED)
+		bv.Velocity = moveDir.Unit * MOVE_SPEED
+	else
+		bv.Velocity = Vector3.zero
 	end
 	
-	-- Jump
-	if moveKeys.Space and humanoid.FloorMaterial ~= Enum.Material.Air then
-		hrp.AssemblyLinearVelocity = Vector3.new(
-			hrp.AssemblyLinearVelocity.X,
-			JUMP_VELOCITY,
-			hrp.AssemblyLinearVelocity.Z
-		)
+	-- Jump using humanoid
+	if moveKeys.Space and humanoid:GetState() ~= Enum.HumanoidStateType.Jumping 
+		and humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
+		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 	end
 end)
 
-print("[Client] DIRECT PHYSICS movement system active")
+print("[Client] BodyVelocity movement system active")
 
 ---------------------------------------
 -- VIEWMODEL ARMS FIX (replace grey arms with player avatar arms)
