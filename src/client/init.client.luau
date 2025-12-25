@@ -44,20 +44,30 @@ local function setCameraMode(mode)
 	end
 end
 
--- Start in TPP
-setCameraMode("TPP")
+-- Start in TPP (wait for character to load first)
+task.spawn(function()
+	if not player.Character then
+		player.CharacterAdded:Wait()
+	end
+	task.wait(0.5) -- Wait for camera to initialize
+	setCameraMode("TPP")
+	print("[Camera] Initial TPP mode set")
+end)
 
 ---------------------------------------
--- DIRECT WASD MOVEMENT (IGNORES gameProcessed for WASD)
+-- FORCE MOVEMENT USING VELOCITY (bypasses Blaster's humanoid:Move override)
 ---------------------------------------
-local keysDown = { W = false, A = false, S = false, D = false }
+local keysDown = { W = false, A = false, S = false, D = false, Space = false }
+local WALK_SPEED = 16
+local JUMP_POWER = 50
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	-- ALWAYS track WASD regardless of gameProcessed
+	-- ALWAYS track movement keys regardless of gameProcessed
 	if input.KeyCode == Enum.KeyCode.W then keysDown.W = true end
 	if input.KeyCode == Enum.KeyCode.A then keysDown.A = true end
 	if input.KeyCode == Enum.KeyCode.S then keysDown.S = true end
 	if input.KeyCode == Enum.KeyCode.D then keysDown.D = true end
+	if input.KeyCode == Enum.KeyCode.Space then keysDown.Space = true end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
@@ -65,38 +75,85 @@ UserInputService.InputEnded:Connect(function(input)
 	if input.KeyCode == Enum.KeyCode.A then keysDown.A = false end
 	if input.KeyCode == Enum.KeyCode.S then keysDown.S = false end
 	if input.KeyCode == Enum.KeyCode.D then keysDown.D = false end
+	if input.KeyCode == Enum.KeyCode.Space then keysDown.Space = false end
 end)
 
-RunService.RenderStepped:Connect(function()
-	local character = player.Character
-	if not character then return end
+local function setupMovementForCharacter(character)
+	local humanoid = character:WaitForChild("Humanoid", 10)
+	local hrp = character:WaitForChild("HumanoidRootPart", 10)
+	if not humanoid or not hrp then return end
 	
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if not humanoid then return end
+	-- Create a BodyVelocity for horizontal movement
+	local bodyVel = Instance.new("BodyVelocity")
+	bodyVel.Name = "GridfallMover"
+	bodyVel.MaxForce = Vector3.new(math.huge, 0, math.huge) -- Only horizontal
+	bodyVel.Velocity = Vector3.new(0, 0, 0)
+	bodyVel.P = 10000
+	bodyVel.Parent = hrp
 	
-	local direction = Vector3.new(0, 0, 0)
-	if keysDown.W then direction = direction + Vector3.new(0, 0, -1) end
-	if keysDown.S then direction = direction + Vector3.new(0, 0, 1) end
-	if keysDown.A then direction = direction + Vector3.new(-1, 0, 0) end
-	if keysDown.D then direction = direction + Vector3.new(1, 0, 0) end
+	print("[Movement] BodyVelocity created for " .. player.Name)
 	
-	if direction.Magnitude > 0 then
-		direction = direction.Unit
-		local camera = workspace.CurrentCamera
-		local camLook = Vector3.new(camera.CFrame.LookVector.X, 0, camera.CFrame.LookVector.Z)
-		local camRight = Vector3.new(camera.CFrame.RightVector.X, 0, camera.CFrame.RightVector.Z)
+	-- Movement update loop
+	local connection
+	connection = RunService.Heartbeat:Connect(function()
+		if not character or not character.Parent then
+			connection:Disconnect()
+			return
+		end
 		
-		if camLook.Magnitude > 0 then camLook = camLook.Unit end
-		if camRight.Magnitude > 0 then camRight = camRight.Unit end
+		if not hrp or not hrp.Parent then
+			connection:Disconnect()
+			return
+		end
 		
-		local worldDir = (camLook * -direction.Z) + (camRight * direction.X)
-		humanoid:Move(worldDir, false)
-	else
-		humanoid:Move(Vector3.new(0, 0, 0), false)
-	end
+		-- Calculate movement direction
+		local direction = Vector3.new(0, 0, 0)
+		if keysDown.W then direction = direction + Vector3.new(0, 0, -1) end
+		if keysDown.S then direction = direction + Vector3.new(0, 0, 1) end
+		if keysDown.A then direction = direction + Vector3.new(-1, 0, 0) end
+		if keysDown.D then direction = direction + Vector3.new(1, 0, 0) end
+		
+		if direction.Magnitude > 0 then
+			direction = direction.Unit
+			local camera = workspace.CurrentCamera
+			local camLook = Vector3.new(camera.CFrame.LookVector.X, 0, camera.CFrame.LookVector.Z)
+			local camRight = Vector3.new(camera.CFrame.RightVector.X, 0, camera.CFrame.RightVector.Z)
+			
+			if camLook.Magnitude > 0 then camLook = camLook.Unit end
+			if camRight.Magnitude > 0 then camRight = camRight.Unit end
+			
+			local worldDir = (camLook * -direction.Z) + (camRight * direction.X)
+			bodyVel.Velocity = worldDir * WALK_SPEED
+			
+			-- Rotate character to face movement direction
+			local targetCF = CFrame.lookAt(hrp.Position, hrp.Position + worldDir)
+			hrp.CFrame = hrp.CFrame:Lerp(targetCF, 0.2)
+		else
+			bodyVel.Velocity = Vector3.new(0, 0, 0)
+		end
+		
+		-- Jump
+		if keysDown.Space and humanoid.FloorMaterial ~= Enum.Material.Air then
+			humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+		end
+	end)
+end
+
+-- Setup for current character
+if player.Character then
+	task.spawn(function()
+		setupMovementForCharacter(player.Character)
+	end)
+end
+
+-- Setup for future characters
+player.CharacterAdded:Connect(function(char)
+	task.spawn(function()
+		setupMovementForCharacter(char)
+	end)
 end)
 
-print("[Client] Direct WASD movement active (ignores gameProcessed)")
+print("[Client] BodyVelocity movement system active")
 
 ---------------------------------------
 -- WEAPON SYSTEM
@@ -394,6 +451,15 @@ local function toggleInventory()
 				updateInventoryScreen()
 			end
 		end
+	end
+	
+	-- Enable/disable mouse cursor for menu navigation
+	if isInventoryOpen then
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		UserInputService.MouseIconEnabled = true
+	else
+		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+		UserInputService.MouseIconEnabled = false
 	end
 	
 	print("[Inventory] " .. (isInventoryOpen and "OPENED" or "CLOSED"))
