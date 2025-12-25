@@ -17,34 +17,59 @@ StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
 
 ---------------------------------------
--- UNBIND BLASTER MOVEMENT ACTIONS (they sink WASD)
+-- DISABLE BLASTER SYSTEM COMPLETELY
 ---------------------------------------
-local function unbindBlasterActions()
-	-- Common action names the Blaster system might use
-	local actionsToUnbind = {
-		"moveForward", "moveBackward", "moveLeft", "moveRight",
-		"MoveForward", "MoveBackward", "MoveLeft", "MoveRight",
-		"Forward", "Backward", "Left", "Right",
-		"W", "A", "S", "D",
-		"Jump", "jump",
-		"BlasterMove", "BlasterInput",
-		"moveForwardAction", "moveBackwardAction", "moveLeftAction", "moveRightAction",
-	}
-	
-	for _, actionName in ipairs(actionsToUnbind) do
-		pcall(function()
-			ContextActionService:UnbindAction(actionName)
-		end)
+local function disableBlasterScripts()
+	-- Find and disable Blaster scripts in ReplicatedStorage
+	local blaster = ReplicatedStorage:FindFirstChild("Blaster")
+	if blaster then
+		local scripts = blaster:FindFirstChild("Scripts")
+		if scripts then
+			for _, script in ipairs(scripts:GetDescendants()) do
+				if script:IsA("LocalScript") or script:IsA("ModuleScript") then
+					-- Can't disable directly, but we can track what's there
+					print("[Client] Found Blaster script:", script.Name)
+				end
+			end
+		end
 	end
-	print("[Client] Attempted to unbind Blaster movement actions")
 end
 
--- Run immediately and repeatedly for first 5 seconds
-unbindBlasterActions()
+-- Try to disable Blaster
+pcall(disableBlasterScripts)
+
+-- CONTINUOUS unbind of ALL bound actions except essential ones
+local essentialActions = {
+	["BlockWeaponFire"] = true,
+	["PlayerModule"] = true,
+}
+
+local function unbindNonEssentialActions()
+	local boundActions = ContextActionService:GetAllBoundActionInfo()
+	local unbound = {}
+	for actionName, _ in pairs(boundActions) do
+		if not essentialActions[actionName] and not string.find(actionName, "Gridfall") then
+			pcall(function()
+				ContextActionService:UnbindAction(actionName)
+				table.insert(unbound, actionName)
+			end)
+		end
+	end
+	if #unbound > 0 then
+		print("[Client] Unbound actions:", table.concat(unbound, ", "))
+	end
+end
+
+-- Run continuously every frame for first 3 seconds, then every second
 task.spawn(function()
-	for i = 1, 10 do
-		task.wait(0.5)
-		unbindBlasterActions()
+	local startTime = tick()
+	while true do
+		unbindNonEssentialActions()
+		if tick() - startTime < 3 then
+			task.wait() -- Every frame for first 3 seconds
+		else
+			task.wait(1) -- Then every second
+		end
 	end
 end)
 

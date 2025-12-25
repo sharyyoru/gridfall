@@ -6,13 +6,21 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
-local character = script.Parent.Parent
 
-local humanoid = character:WaitForChild("Humanoid", 10)
-local hrp = character:WaitForChild("HumanoidRootPart", 10)
+-- Wait for character (script is nested in CharacterScripts folder inside character)
+local character = player.Character or player.CharacterAdded:Wait()
+
+-- Wait for humanoid with retry
+local humanoid, hrp
+for i = 1, 20 do
+	humanoid = character:FindFirstChildOfClass("Humanoid")
+	hrp = character:FindFirstChild("HumanoidRootPart")
+	if humanoid and hrp then break end
+	task.wait(0.25)
+end
 
 if not humanoid or not hrp then
-	warn("[CharacterScript] Failed to find Humanoid or HumanoidRootPart")
+	warn("[CharacterScript] Failed to find Humanoid or HumanoidRootPart after 5s")
 	return
 end
 
