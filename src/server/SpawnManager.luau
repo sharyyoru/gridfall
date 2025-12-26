@@ -69,24 +69,36 @@ function SpawnManager.DisableOtherSpawns()
 	end
 end
 
-function SpawnManager.GetSpawnCFrame(): CFrame
-	if mainSpawn then
-		return mainSpawn.CFrame + Vector3.new(0, 3, 0)
-	end
-	
-	-- Fallback spawn position
-	return CFrame.new(0, 10, 0)
-end
-
 function SpawnManager.OnPlayerAdded(player: Player)
+	-- Let Roblox handle spawning naturally - no custom teleporting
+	-- Only clear invisible barriers if needed
 	player.CharacterAdded:Connect(function(character)
-		-- Teleport to main spawn after a brief delay
-		task.wait(0.1)
-		local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
+		task.wait(1) -- Wait for character to fully load
+		local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
 		if humanoidRootPart then
-			humanoidRootPart.CFrame = SpawnManager.GetSpawnCFrame()
+			SpawnManager.ClearInvisibleBarriers(humanoidRootPart.Position, character)
 		end
 	end)
+end
+
+function SpawnManager.ClearInvisibleBarriers(position: Vector3, character: Model?)
+	local workspace = game:GetService("Workspace")
+	local region = Region3.new(position - Vector3.new(10, 10, 10), position + Vector3.new(10, 10, 10))
+	
+	-- Find any parts in the spawn region that might be blocking movement
+	for _, part in ipairs(workspace:FindPartsInRegion3(region, nil, math.huge)) do
+		-- Skip important parts
+		if part.Name == "Baseplate" or (character and part:IsDescendantOf(character)) or part:IsA("SpawnLocation") then
+			continue
+		end
+		
+		-- Check for invisible parts that could block movement
+		if part.Transparency >= 0.5 and part.CanCollide and part.Size.X < 20 and part.Size.Y < 20 and part.Size.Z < 20 then
+			-- Disable collision for suspicious invisible parts
+			part.CanCollide = false
+			print("[SpawnManager] Disabled collision for invisible barrier:", part.Name, part:GetFullName())
+		end
+	end
 end
 
 function SpawnManager.Init()

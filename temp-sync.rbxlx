@@ -1,0 +1,3833 @@
+<roblox version="4">
+  <Item class="Lighting" referent="0">
+    <Properties>
+      <string name="Name">Lighting</string>
+      <Color3 name="Ambient">
+        <R>0.3</R>
+        <G>0.3</G>
+        <B>0.35</B>
+      </Color3>
+      <float name="Brightness">2</float>
+      <bool name="GlobalShadows">true</bool>
+      <bool name="Outlines">false</bool>
+      <token name="Technology">4</token>
+    </Properties>
+  </Item>
+  <Item class="ReplicatedFirst" referent="1">
+    <Properties>
+      <string name="Name">ReplicatedFirst</string>
+    </Properties>
+    <Item class="LocalScript" referent="2">
+      <Properties>
+        <string name="Name">ReplicatedFirst</string>
+        <string name="Source"><![CDATA[-- Gridfall ReplicatedFirst
+-- Loading screen and early initialization
+
+local Players = game:GetService("Players")
+local ReplicatedFirst = game:GetService("ReplicatedFirst")
+local ContentProvider = game:GetService("ContentProvider")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Remove default loading screen
+ReplicatedFirst:RemoveDefaultLoadingScreen()
+
+-- Create loading screen
+local loadingScreen = Instance.new("ScreenGui")
+loadingScreen.Name = "LoadingScreen"
+loadingScreen.IgnoreGuiInset = true
+loadingScreen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+loadingScreen.Parent = playerGui
+
+-- Background
+local background = Instance.new("Frame")
+background.Name = "Background"
+background.Size = UDim2.new(1, 0, 1, 0)
+background.BackgroundColor3 = Color3.fromRGB(8, 12, 20)
+background.BorderSizePixel = 0
+background.Parent = loadingScreen
+
+-- Logo/Title
+local title = Instance.new("TextLabel")
+title.Name = "Title"
+title.Size = UDim2.new(0, 400, 0, 80)
+title.Position = UDim2.new(0.5, -200, 0.4, -40)
+title.BackgroundTransparency = 1
+title.Text = "GRIDFALL"
+title.TextColor3 = Color3.fromRGB(240, 240, 240)
+title.TextSize = 60
+title.Font = Enum.Font.GothamBold
+title.Parent = background
+
+-- Subtitle
+local subtitle = Instance.new("TextLabel")
+subtitle.Name = "Subtitle"
+subtitle.Size = UDim2.new(0, 400, 0, 30)
+subtitle.Position = UDim2.new(0.5, -200, 0.4, 40)
+subtitle.BackgroundTransparency = 1
+subtitle.Text = "PREPARING YOUR ARSENAL..."
+subtitle.TextColor3 = Color3.fromRGB(65, 185, 220)
+subtitle.TextSize = 14
+subtitle.Font = Enum.Font.Gotham
+subtitle.Parent = background
+
+-- Loading bar background
+local loadingBarBg = Instance.new("Frame")
+loadingBarBg.Name = "LoadingBarBg"
+loadingBarBg.Size = UDim2.new(0, 300, 0, 4)
+loadingBarBg.Position = UDim2.new(0.5, -150, 0.55, 0)
+loadingBarBg.BackgroundColor3 = Color3.fromRGB(40, 45, 55)
+loadingBarBg.BorderSizePixel = 0
+loadingBarBg.Parent = background
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 2)
+corner.Parent = loadingBarBg
+
+-- Loading bar fill
+local loadingBarFill = Instance.new("Frame")
+loadingBarFill.Name = "Fill"
+loadingBarFill.Size = UDim2.new(0, 0, 1, 0)
+loadingBarFill.BackgroundColor3 = Color3.fromRGB(65, 185, 220)
+loadingBarFill.BorderSizePixel = 0
+loadingBarFill.Parent = loadingBarBg
+
+local fillCorner = Instance.new("UICorner")
+fillCorner.CornerRadius = UDim.new(0, 2)
+fillCorner.Parent = loadingBarFill
+
+-- Animate loading bar
+local function animateLoading()
+	local tweenInfo = TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	local tween = TweenService:Create(loadingBarFill, tweenInfo, {Size = UDim2.new(1, 0, 1, 0)})
+	tween:Play()
+	tween.Completed:Wait()
+end
+
+-- Wait for game to load
+task.spawn(function()
+	-- Animate loading
+	animateLoading()
+	
+	-- Wait for character
+	if not player.Character then
+		player.CharacterAdded:Wait()
+	end
+	
+	-- Additional wait for smooth transition
+	task.wait(0.5)
+	
+	-- Fade out
+	local fadeInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	local fadeTween = TweenService:Create(background, fadeInfo, {BackgroundTransparency = 1})
+	local titleFade = TweenService:Create(title, fadeInfo, {TextTransparency = 1})
+	local subtitleFade = TweenService:Create(subtitle, fadeInfo, {TextTransparency = 1})
+	local barFade = TweenService:Create(loadingBarBg, fadeInfo, {BackgroundTransparency = 1})
+	local fillFade = TweenService:Create(loadingBarFill, fadeInfo, {BackgroundTransparency = 1})
+	
+	fadeTween:Play()
+	titleFade:Play()
+	subtitleFade:Play()
+	barFade:Play()
+	fillFade:Play()
+	
+	fadeTween.Completed:Wait()
+	loadingScreen:Destroy()
+end)
+
+print("[ReplicatedFirst] Loading screen initialized")
+]]></string>
+      </Properties>
+    </Item>
+  </Item>
+  <Item class="ReplicatedStorage" referent="3">
+    <Properties>
+      <string name="Name">ReplicatedStorage</string>
+    </Properties>
+    <Item class="ModuleScript" referent="4">
+      <Properties>
+        <string name="Name">Assets</string>
+        <string name="Source"><![CDATA[-- Gridfall Assets Module
+-- Contains asset IDs and references
+
+local Assets = {}
+
+-- UI Icons
+Assets.Icons = {
+	-- Weapon Types
+	AutoRifle = "rbxassetid://0",
+	ScoutRifle = "rbxassetid://0",
+	HandCannon = "rbxassetid://0",
+	Shotgun = "rbxassetid://0",
+	Sniper = "rbxassetid://0",
+	SMG = "rbxassetid://0",
+	RocketLauncher = "rbxassetid://0",
+	Sword = "rbxassetid://0",
+	
+	-- Armor Slots
+	Helmet = "rbxassetid://0",
+	Chest = "rbxassetid://0",
+	Arms = "rbxassetid://0",
+	Legs = "rbxassetid://0",
+	Class = "rbxassetid://0",
+	
+	-- UI Elements
+	Star = "rbxassetid://6031075938",
+	Diamond = "rbxassetid://6031075938",
+	Shield = "rbxassetid://6031075938",
+}
+
+-- Sounds
+Assets.Sounds = {
+	UIClick = "rbxassetid://6042053626",
+	UIHover = "rbxassetid://6042053626",
+	WeaponEquip = "rbxassetid://0",
+	WeaponUnequip = "rbxassetid://0",
+	InventoryOpen = "rbxassetid://0",
+	InventoryClose = "rbxassetid://0",
+}
+
+-- Default Clothing
+Assets.Clothing = {
+	DefaultShirt = "rbxassetid://6536112663",
+	DefaultPants = "rbxassetid://6536113682",
+}
+
+return Assets
+]]></string>
+      </Properties>
+    </Item>
+    <Item class="Folder" referent="5">
+      <Properties>
+        <string name="Name">Blaster</string>
+      </Properties>
+    </Item>
+    <Item class="ModuleScript" referent="6">
+      <Properties>
+        <string name="Name">Shared</string>
+        <string name="Source"><![CDATA[-- Gridfall Shared Module Index
+-- Central access point for all shared modules
+
+local Shared = {}
+
+Shared.Constants = require(script.Constants)
+Shared.Types = require(script.Types)
+Shared.Utils = require(script.Utils)
+Shared.ItemData = require(script.ItemData)
+Shared.ArmorData = require(script.ArmorData)
+
+return Shared
+]]></string>
+      </Properties>
+      <Item class="ModuleScript" referent="7">
+        <Properties>
+          <string name="Name">ArmorData</string>
+          <string name="Source"><![CDATA[-- Gridfall Armor Data
+-- Default armor pieces database
+
+local Types = require(script.Parent.Types)
+
+local ArmorData = {}
+
+ArmorData.Armor = {
+	-- Helmets
+	{
+		Id = "helmet_titan_1",
+		Name = "Sentinel Helm",
+		Slot = "Helmet",
+		Rarity = "Legendary",
+		Power = 1350,
+		Mobility = 8,
+		Resilience = 22,
+		Recovery = 12,
+		Icon = "rbxassetid://0",
+	},
+	{
+		Id = "helmet_titan_2",
+		Name = "Phoenix Protocol",
+		Slot = "Helmet",
+		Rarity = "Exotic",
+		Power = 1360,
+		Mobility = 10,
+		Resilience = 20,
+		Recovery = 15,
+		Icon = "rbxassetid://0",
+	},
+	
+	-- Chest Armor
+	{
+		Id = "chest_titan_1",
+		Name = "Plate of the Exile",
+		Slot = "Chest",
+		Rarity = "Legendary",
+		Power = 1355,
+		Mobility = 6,
+		Resilience = 25,
+		Recovery = 10,
+		Icon = "rbxassetid://0",
+	},
+	{
+		Id = "chest_titan_2",
+		Name = "Cuirass of the Falling Star",
+		Slot = "Chest",
+		Rarity = "Exotic",
+		Power = 1365,
+		Mobility = 12,
+		Resilience = 18,
+		Recovery = 18,
+		Icon = "rbxassetid://0",
+	},
+	
+	-- Arms
+	{
+		Id = "arms_titan_1",
+		Name = "Gauntlets of Nohr",
+		Slot = "Arms",
+		Rarity = "Legendary",
+		Power = 1350,
+		Mobility = 10,
+		Resilience = 20,
+		Recovery = 12,
+		Icon = "rbxassetid://0",
+	},
+	{
+		Id = "arms_titan_2",
+		Name = "Synthoceps",
+		Slot = "Arms",
+		Rarity = "Exotic",
+		Power = 1360,
+		Mobility = 15,
+		Resilience = 15,
+		Recovery = 15,
+		Icon = "rbxassetid://0",
+	},
+	
+	-- Legs
+	{
+		Id = "legs_titan_1",
+		Name = "Greaves of the Great Hunt",
+		Slot = "Legs",
+		Rarity = "Legendary",
+		Power = 1350,
+		Mobility = 12,
+		Resilience = 18,
+		Recovery = 14,
+		Icon = "rbxassetid://0",
+	},
+	{
+		Id = "legs_titan_2",
+		Name = "Lion Rampant",
+		Slot = "Legs",
+		Rarity = "Exotic",
+		Power = 1358,
+		Mobility = 20,
+		Resilience = 10,
+		Recovery = 16,
+		Icon = "rbxassetid://0",
+	},
+	
+	-- Class Items
+	{
+		Id = "class_titan_1",
+		Name = "Mark of the Unbroken",
+		Slot = "Class",
+		Rarity = "Legendary",
+		Power = 1350,
+		Mobility = 10,
+		Resilience = 10,
+		Recovery = 10,
+		Icon = "rbxassetid://0",
+	},
+} :: {Types.ArmorData}
+
+function ArmorData.GetArmorById(id: string): Types.ArmorData?
+	for _, armor in ipairs(ArmorData.Armor) do
+		if armor.Id == id then
+			return armor
+		end
+	end
+	return nil
+end
+
+function ArmorData.GetArmorBySlot(slot: Types.ArmorSlot): {Types.ArmorData}
+	local armorPieces = {}
+	for _, armor in ipairs(ArmorData.Armor) do
+		if armor.Slot == slot then
+			table.insert(armorPieces, armor)
+		end
+	end
+	return armorPieces
+end
+
+return ArmorData
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="8">
+        <Properties>
+          <string name="Name">Constants</string>
+          <string name="Source"><![CDATA[-- Gridfall Constants
+-- Game-wide constants and configuration
+
+local Constants = {}
+
+-- Spawn Configuration
+Constants.SPAWN = {
+	MainSpawnName = "MainSpawn",
+	DefaultMapName = "Overheat",
+	RespawnTime = 3,
+}
+
+-- Camera Configuration
+Constants.CAMERA = {
+	FPP_FOV = 70,
+	TPP_FOV = 65,
+	TPP_OFFSET = Vector3.new(2.5, 2, 8),
+	TPP_TRANSITION_TIME = 0.3,
+	FPP_TRANSITION_TIME = 0.2,
+}
+
+-- Character Configuration
+Constants.CHARACTER = {
+	DefaultWalkSpeed = 16,
+	SprintSpeed = 24,
+	DefaultJumpPower = 50,
+}
+
+-- Soldier Appearance (Default look for all players)
+Constants.SOLDIER_APPEARANCE = {
+	BodyColors = {
+		HeadColor = BrickColor.new("Nougat"),
+		TorsoColor = BrickColor.new("Dark stone grey"),
+		LeftArmColor = BrickColor.new("Nougat"),
+		RightArmColor = BrickColor.new("Nougat"),
+		LeftLegColor = BrickColor.new("Dark stone grey"),
+		RightLegColor = BrickColor.new("Dark stone grey"),
+	},
+	-- These will be applied as default clothing
+	DefaultShirtId = "rbxassetid://6536112663", -- Military style shirt
+	DefaultPantsId = "rbxassetid://6536113682", -- Military style pants
+}
+
+-- UI Configuration
+Constants.UI = {
+	InventoryToggleKey = Enum.KeyCode.Tab,
+	PrimaryColor = Color3.fromRGB(65, 185, 220),
+	SecondaryColor = Color3.fromRGB(255, 200, 50),
+	BackgroundColor = Color3.fromRGB(20, 25, 35),
+	TextColor = Color3.fromRGB(240, 240, 240),
+	RarityColors = {
+		Common = Color3.fromRGB(195, 195, 195),
+		Uncommon = Color3.fromRGB(55, 180, 55),
+		Rare = Color3.fromRGB(80, 130, 255),
+		Legendary = Color3.fromRGB(160, 80, 200),
+		Exotic = Color3.fromRGB(255, 200, 50),
+	},
+}
+
+-- Equipment Slots
+Constants.EQUIPMENT_SLOTS = {
+	"Helmet",
+	"Chest",
+	"Arms",
+	"Legs",
+	"Class",
+}
+
+-- Weapon Slots
+Constants.WEAPON_SLOTS = {
+	"Kinetic",
+	"Energy",
+	"Power",
+}
+
+-- Inventory
+Constants.INVENTORY = {
+	MaxWeaponSlots = 9,
+	MaxArmorSlots = 10,
+}
+
+return Constants
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="9">
+        <Properties>
+          <string name="Name">ItemData</string>
+          <string name="Source"><![CDATA[-- Gridfall Item Data
+-- Default weapons and items database
+
+local Types = require(script.Parent.Types)
+
+local ItemData = {}
+
+ItemData.Weapons = {
+	-- Kinetic Weapons
+	{
+		Id = "kinetic_auto_1",
+		Name = "Origin Story",
+		Type = "Auto Rifle",
+		Slot = "Kinetic",
+		Rarity = "Legendary",
+		Power = 1350,
+		Magazine = 40,
+		ReserveAmmo = 320,
+		Damage = 18,
+		FireRate = 600,
+		Icon = "rbxassetid://0",
+	},
+	{
+		Id = "kinetic_scout_1",
+		Name = "Night Watch",
+		Type = "Scout Rifle",
+		Slot = "Kinetic",
+		Rarity = "Legendary",
+		Power = 1350,
+		Magazine = 16,
+		ReserveAmmo = 160,
+		Damage = 45,
+		FireRate = 180,
+		Icon = "rbxassetid://0",
+	},
+	{
+		Id = "kinetic_hc_1",
+		Name = "Midnight Coup",
+		Type = "Hand Cannon",
+		Slot = "Kinetic",
+		Rarity = "Legendary",
+		Power = 1355,
+		Magazine = 12,
+		ReserveAmmo = 96,
+		Damage = 68,
+		FireRate = 140,
+		Icon = "rbxassetid://0",
+	},
+	
+	-- Energy Weapons
+	{
+		Id = "energy_smg_1",
+		Name = "Riskrunner",
+		Type = "SMG",
+		Slot = "Energy",
+		Rarity = "Exotic",
+		Power = 1360,
+		Magazine = 37,
+		ReserveAmmo = 296,
+		Damage = 15,
+		FireRate = 900,
+		Icon = "rbxassetid://0",
+	},
+	{
+		Id = "energy_auto_1",
+		Name = "Gnawing Hunger",
+		Type = "Auto Rifle",
+		Slot = "Energy",
+		Rarity = "Legendary",
+		Power = 1350,
+		Magazine = 45,
+		ReserveAmmo = 360,
+		Damage = 17,
+		FireRate = 600,
+		Icon = "rbxassetid://0",
+	},
+	
+	-- Power Weapons
+	{
+		Id = "power_rocket_1",
+		Name = "Gjallarhorn",
+		Type = "Rocket Launcher",
+		Slot = "Power",
+		Rarity = "Exotic",
+		Power = 1365,
+		Magazine = 1,
+		ReserveAmmo = 6,
+		Damage = 1200,
+		FireRate = 15,
+		Icon = "rbxassetid://0",
+	},
+	{
+		Id = "power_sniper_1",
+		Name = "Whisper of the Worm",
+		Type = "Sniper",
+		Slot = "Power",
+		Rarity = "Exotic",
+		Power = 1360,
+		Magazine = 3,
+		ReserveAmmo = 18,
+		Damage = 450,
+		FireRate = 72,
+		Icon = "rbxassetid://0",
+	},
+	{
+		Id = "power_sword_1",
+		Name = "Falling Guillotine",
+		Type = "Sword",
+		Slot = "Power",
+		Rarity = "Legendary",
+		Power = 1355,
+		Magazine = 60,
+		ReserveAmmo = 60,
+		Damage = 200,
+		FireRate = 45,
+		Icon = "rbxassetid://0",
+	},
+} :: {Types.WeaponData}
+
+function ItemData.GetWeaponById(id: string): Types.WeaponData?
+	for _, weapon in ipairs(ItemData.Weapons) do
+		if weapon.Id == id then
+			return weapon
+		end
+	end
+	return nil
+end
+
+function ItemData.GetWeaponsBySlot(slot: Types.WeaponSlot): {Types.WeaponData}
+	local weapons = {}
+	for _, weapon in ipairs(ItemData.Weapons) do
+		if weapon.Slot == slot then
+			table.insert(weapons, weapon)
+		end
+	end
+	return weapons
+end
+
+return ItemData
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="10">
+        <Properties>
+          <string name="Name">Types</string>
+          <string name="Source"><![CDATA[-- Gridfall Type Definitions
+-- Shared types used across client and server
+
+export type ItemRarity = "Common" | "Uncommon" | "Rare" | "Legendary" | "Exotic"
+
+export type WeaponType = "Auto Rifle" | "Scout Rifle" | "Hand Cannon" | "Shotgun" | "Sniper" | "SMG" | "Rocket Launcher" | "Sword"
+
+export type WeaponSlot = "Kinetic" | "Energy" | "Power"
+
+export type ArmorSlot = "Helmet" | "Chest" | "Arms" | "Legs" | "Class"
+
+export type WeaponData = {
+	Id: string,
+	Name: string,
+	Type: WeaponType,
+	Slot: WeaponSlot,
+	Rarity: ItemRarity,
+	Power: number,
+	Magazine: number,
+	ReserveAmmo: number,
+	Damage: number,
+	FireRate: number,
+	Icon: string,
+	Model: string?,
+}
+
+export type ArmorData = {
+	Id: string,
+	Name: string,
+	Slot: ArmorSlot,
+	Rarity: ItemRarity,
+	Power: number,
+	Mobility: number,
+	Resilience: number,
+	Recovery: number,
+	Icon: string,
+	Model: string?,
+}
+
+export type PlayerStats = {
+	Power: number,
+	Mobility: number,
+	Resilience: number,
+	Recovery: number,
+}
+
+export type PlayerInventory = {
+	Weapons: {WeaponData},
+	Armor: {ArmorData},
+	EquippedWeapons: {[WeaponSlot]: WeaponData?},
+	EquippedArmor: {[ArmorSlot]: ArmorData?},
+	CurrentWeaponSlot: WeaponSlot?,
+}
+
+export type CameraMode = "FPP" | "TPP"
+
+return nil
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="11">
+        <Properties>
+          <string name="Name">Utils</string>
+          <string name="Source"><![CDATA[-- Gridfall Utilities
+-- Common utility functions
+
+local Utils = {}
+
+function Utils.lerp(a: number, b: number, t: number): number
+	return a + (b - a) * t
+end
+
+function Utils.lerpVector3(a: Vector3, b: Vector3, t: number): Vector3
+	return a:Lerp(b, t)
+end
+
+function Utils.formatNumber(num: number): string
+	if num >= 1000000 then
+		return string.format("%.1fM", num / 1000000)
+	elseif num >= 1000 then
+		return string.format("%.1fK", num / 1000)
+	end
+	return tostring(math.floor(num))
+end
+
+function Utils.formatTime(seconds: number): string
+	local mins = math.floor(seconds / 60)
+	local secs = math.floor(seconds % 60)
+	return string.format("%d:%02d", mins, secs)
+end
+
+function Utils.deepCopy<T>(original: T): T
+	if type(original) ~= "table" then
+		return original
+	end
+	
+	local copy = {}
+	for key, value in pairs(original :: any) do
+		copy[key] = Utils.deepCopy(value)
+	end
+	return copy :: any
+end
+
+function Utils.calculatePower(inventory: any): number
+	local totalPower = 0
+	local count = 0
+	
+	if inventory.EquippedWeapons then
+		for _, weapon in pairs(inventory.EquippedWeapons) do
+			if weapon then
+				totalPower = totalPower + weapon.Power
+				count = count + 1
+			end
+		end
+	end
+	
+	if inventory.EquippedArmor then
+		for _, armor in pairs(inventory.EquippedArmor) do
+			if armor then
+				totalPower = totalPower + armor.Power
+				count = count + 1
+			end
+		end
+	end
+	
+	return count > 0 and math.floor(totalPower / count) or 0
+end
+
+function Utils.getChildrenOfClass(parent: Instance, className: string): {Instance}
+	local children = {}
+	for _, child in ipairs(parent:GetChildren()) do
+		if child:IsA(className) then
+			table.insert(children, child)
+		end
+	end
+	return children
+end
+
+function Utils.waitForChildOfClass(parent: Instance, className: string, timeout: number?): Instance?
+	local startTime = tick()
+	local maxTime = timeout or 10
+	
+	while tick() - startTime < maxTime do
+		for _, child in ipairs(parent:GetChildren()) do
+			if child:IsA(className) then
+				return child
+			end
+		end
+		task.wait(0.1)
+	end
+	return nil
+end
+
+return Utils
+]]></string>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Folder" referent="12">
+      <Properties>
+        <string name="Name">Utility</string>
+      </Properties>
+    </Item>
+  </Item>
+  <Item class="ServerScriptService" referent="13">
+    <Properties>
+      <string name="Name">ServerScriptService</string>
+    </Properties>
+    <Item class="Folder" referent="14">
+      <Properties>
+        <string name="Name">Blaster</string>
+      </Properties>
+    </Item>
+    <Item class="Script" referent="15">
+      <Properties>
+        <string name="Name">Server</string>
+        <token name="RunContext">0</token>
+        <string name="Source">-- Gridfall Server Main
+-- Initializes all server-side systems
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+
+-- Wait for shared modules
+local Shared = require(ReplicatedStorage:WaitForChild("Shared"))
+local Constants = Shared.Constants
+
+-- Server modules
+local GameModeDisabler = require(script.GameModeDisabler)
+local SpawnManager = require(script.SpawnManager)
+local CharacterManager = require(script.CharacterManager)
+local InventoryManager = require(script.InventoryManager)
+
+-- Create RemoteEvents and RemoteFunctions
+local Remotes = Instance.new("Folder")
+Remotes.Name = "Remotes"
+Remotes.Parent = ReplicatedStorage
+
+local Events = {
+	"WeaponEquipped",
+	"WeaponUnequipped",
+	"ArmorEquipped",
+	"InventoryUpdated",
+	"CameraModeChanged",
+}
+
+local Functions = {
+	"GetInventory",
+	"EquipWeapon",
+	"UnequipWeapon",
+	"EquipArmor",
+}
+
+for _, eventName in ipairs(Events) do
+	local event = Instance.new("RemoteEvent")
+	event.Name = eventName
+	event.Parent = Remotes
+end
+
+for _, funcName in ipairs(Functions) do
+	local func = Instance.new("RemoteFunction")
+	func.Name = funcName
+	func.Parent = Remotes
+end
+
+-- Initialize systems (GameModeDisabler first to clean up existing systems)
+GameModeDisabler.Init()
+SpawnManager.Init()
+CharacterManager.Init()
+InventoryManager.Init()
+
+print("[Gridfall] Server initialized successfully")</string>
+      </Properties>
+      <Item class="ModuleScript" referent="16">
+        <Properties>
+          <string name="Name">CharacterManager</string>
+          <string name="Source"><![CDATA[-- Gridfall Character Manager
+-- Handles character appearance, disables accessories, applies soldier look
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local InsertService = game:GetService("InsertService")
+
+local Shared = require(ReplicatedStorage:WaitForChild("Shared"))
+local Constants = Shared.Constants
+
+local CharacterManager = {}
+
+-- Store original character descriptions for potential restoration
+local originalDescriptions: {[Player]: HumanoidDescription} = {}
+
+function CharacterManager.RemoveAccessoriesAndClothing(character: Model)
+	-- Remove all accessories
+	for _, child in ipairs(character:GetChildren()) do
+		if child:IsA("Accessory") then
+			child:Destroy()
+		end
+	end
+	
+	-- Remove shirts and pants (we'll apply our own)
+	local shirt = character:FindFirstChildOfClass("Shirt")
+	if shirt then
+		shirt:Destroy()
+	end
+	
+	local pants = character:FindFirstChildOfClass("Pants")
+	if pants then
+		pants:Destroy()
+	end
+	
+	local shirtGraphic = character:FindFirstChildOfClass("ShirtGraphic")
+	if shirtGraphic then
+		shirtGraphic:Destroy()
+	end
+end
+
+function CharacterManager.ApplySoldierAppearance(character: Model, player: Player)
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return end
+	
+	-- Wait a frame to ensure character is fully loaded
+	task.wait()
+	
+	-- Remove accessories and existing clothing
+	CharacterManager.RemoveAccessoriesAndClothing(character)
+	
+	-- Apply body colors
+	local bodyColors = character:FindFirstChildOfClass("BodyColors")
+	if not bodyColors then
+		bodyColors = Instance.new("BodyColors")
+		bodyColors.Parent = character
+	end
+	
+	local soldierColors = Constants.SOLDIER_APPEARANCE.BodyColors
+	bodyColors.HeadColor = soldierColors.HeadColor
+	bodyColors.TorsoColor = soldierColors.TorsoColor
+	bodyColors.LeftArmColor = soldierColors.LeftArmColor
+	bodyColors.RightArmColor = soldierColors.RightArmColor
+	bodyColors.LeftLegColor = soldierColors.LeftLegColor
+	bodyColors.RightLegColor = soldierColors.RightLegColor
+	
+	-- Apply default soldier clothing
+	local shirt = Instance.new("Shirt")
+	shirt.Name = "Shirt"
+	shirt.ShirtTemplate = Constants.SOLDIER_APPEARANCE.DefaultShirtId
+	shirt.Parent = character
+	
+	local pants = Instance.new("Pants")
+	pants.Name = "Pants"
+	pants.PantsTemplate = Constants.SOLDIER_APPEARANCE.DefaultPantsId
+	pants.Parent = character
+	
+	-- Ensure player's actual skin is shown on arms and head
+	-- We need to keep the player's actual body parts visible
+	CharacterManager.SetupPlayerArms(character, player)
+end
+
+function CharacterManager.SetupPlayerArms(character: Model, player: Player)
+	-- This ensures the player's actual avatar arms are visible
+	-- The arms will show the player's skin tone from their avatar
+	
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return end
+	
+	-- Get player's HumanoidDescription to get their skin tone
+	local success, description = pcall(function()
+		return Players:GetHumanoidDescriptionFromUserId(player.UserId)
+	end)
+	
+	if success and description then
+		-- Store original description
+		originalDescriptions[player] = description
+		
+		-- Apply only the body colors from player's avatar to arms and head
+		local bodyColors = character:FindFirstChildOfClass("BodyColors")
+		if bodyColors then
+			-- Keep player's actual skin color for arms and head
+			local headColor = description.HeadColor
+			local leftArmColor = description.LeftArmColor
+			local rightArmColor = description.RightArmColor
+			
+			if headColor ~= Color3.new(0, 0, 0) then
+				bodyColors.HeadColor3 = headColor
+			end
+			if leftArmColor ~= Color3.new(0, 0, 0) then
+				bodyColors.LeftArmColor3 = leftArmColor
+			end
+			if rightArmColor ~= Color3.new(0, 0, 0) then
+				bodyColors.RightArmColor3 = rightArmColor
+			end
+		end
+		
+		-- Apply the player's face
+		local head = character:FindFirstChild("Head")
+		if head then
+			local face = head:FindFirstChildOfClass("Decal")
+			if face and description.Face ~= 0 then
+				face.Texture = "rbxassetid://" .. tostring(description.Face)
+			end
+		end
+	end
+end
+
+function CharacterManager.OnCharacterAdded(character: Model, player: Player)
+	-- Wait for humanoid to be ready
+	local humanoid = character:WaitForChild("Humanoid", 10)
+	if not humanoid then return end
+	
+	-- Apply soldier appearance
+	CharacterManager.ApplySoldierAppearance(character, player)
+	
+	-- Set up character stats
+	humanoid.WalkSpeed = Constants.CHARACTER.DefaultWalkSpeed
+	humanoid.JumpPower = Constants.CHARACTER.DefaultJumpPower
+	
+	print("[CharacterManager] Applied soldier appearance to " .. player.Name)
+end
+
+function CharacterManager.OnPlayerAdded(player: Player)
+	player.CharacterAdded:Connect(function(character)
+		CharacterManager.OnCharacterAdded(character, player)
+	end)
+	
+	-- Handle if character already exists
+	if player.Character then
+		CharacterManager.OnCharacterAdded(player.Character, player)
+	end
+end
+
+function CharacterManager.OnPlayerRemoving(player: Player)
+	-- Clean up stored description
+	originalDescriptions[player] = nil
+end
+
+function CharacterManager.Init()
+	-- Connect player events
+	Players.PlayerAdded:Connect(CharacterManager.OnPlayerAdded)
+	Players.PlayerRemoving:Connect(CharacterManager.OnPlayerRemoving)
+	
+	-- Handle existing players
+	for _, player in ipairs(Players:GetPlayers()) do
+		CharacterManager.OnPlayerAdded(player)
+	end
+	
+	print("[CharacterManager] Initialized")
+end
+
+return CharacterManager
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="17">
+        <Properties>
+          <string name="Name">GameModeDisabler</string>
+          <string name="Source"><![CDATA[-- Gridfall Game Mode Disabler
+-- AGGRESSIVELY disables ALL existing game systems from Studio
+
+local Players = game:GetService("Players")
+local Teams = game:GetService("Teams")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+local StarterGui = game:GetService("StarterGui")
+local RunService = game:GetService("RunService")
+
+local GameModeDisabler = {}
+
+-- Names of scripts/folders to NOT disable (ours + weapon system)
+local PROTECTED_NAMES = {
+	["Server"] = true,
+	["Shared"] = true,
+	["Remotes"] = true,
+	["Assets"] = true,
+	["GridfallUI"] = true,
+	["Blaster"] = true, -- KEEP the weapon system!
+	["Weapons"] = true,
+	["Tools"] = true,
+}
+
+function GameModeDisabler.DisableTeams()
+	-- Destroy all teams
+	for _, team in ipairs(Teams:GetChildren()) do
+		team:Destroy()
+	end
+	print("[GameModeDisabler] Teams destroyed")
+end
+
+function GameModeDisabler.DisableGameplayScripts()
+	-- Only disable Gameplay folder scripts (game mode, rounds, timer)
+	-- Keep Blaster scripts for weapons!
+	
+	local gameplay = ServerScriptService:FindFirstChild("Gameplay")
+	if gameplay then
+		for _, desc in ipairs(gameplay:GetDescendants()) do
+			if desc:IsA("Script") then
+				desc.Disabled = true
+				print("[GameModeDisabler] Disabled: " .. desc:GetFullName())
+			end
+		end
+	end
+	
+	-- Also disable Gameplay scripts in ReplicatedStorage
+	local repGameplay = ReplicatedStorage:FindFirstChild("Gameplay")
+	if repGameplay then
+		for _, desc in ipairs(repGameplay:GetDescendants()) do
+			if desc:IsA("LocalScript") or desc:IsA("Script") then
+				desc.Disabled = true
+				print("[GameModeDisabler] Disabled: " .. desc:GetFullName())
+			end
+		end
+	end
+end
+
+function GameModeDisabler.DestroyAllExistingGuis()
+	-- Destroy ALL GUIs in StarterGui except ours
+	for _, gui in ipairs(StarterGui:GetChildren()) do
+		if not PROTECTED_NAMES[gui.Name] and gui:IsA("ScreenGui") then
+			gui:Destroy()
+			print("[GameModeDisabler] Destroyed GUI: " .. gui.Name)
+		end
+	end
+	
+	-- Also destroy GUIs in all player's PlayerGui
+	for _, player in ipairs(Players:GetPlayers()) do
+		local playerGui = player:FindFirstChild("PlayerGui")
+		if playerGui then
+			for _, gui in ipairs(playerGui:GetChildren()) do
+				if not PROTECTED_NAMES[gui.Name] and gui:IsA("ScreenGui") then
+					-- Don't destroy our UI or Roblox core UI
+					if gui.Name ~= "GridfallUI" and gui.Name ~= "HUDScreen" and gui.Name ~= "InventoryScreen" and gui.Name ~= "LoadingScreen" then
+						gui:Destroy()
+						print("[GameModeDisabler] Destroyed player GUI: " .. gui.Name)
+					end
+				end
+			end
+		end
+	end
+end
+
+function GameModeDisabler.FixCharacterState(character)
+	if not character then return end
+	
+	-- Unanchor all parts
+	for _, part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.Anchored = false
+		end
+	end
+	
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		-- Fix all states that could block movement
+		humanoid.PlatformStand = false
+		humanoid.Sit = false
+		humanoid.WalkSpeed = 16
+		humanoid.JumpPower = 50
+		humanoid.AutoRotate = true
+		
+		-- Change state to running/idle
+		humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+		task.wait(0.1)
+		humanoid:ChangeState(Enum.HumanoidStateType.Running)
+	end
+	
+	local hrp = character:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		hrp.Anchored = false
+	end
+end
+
+function GameModeDisabler.SetupCharacterFixer()
+	local function setupPlayer(player)
+		player.Neutral = true
+		player.Team = nil
+		
+		local function onCharacterAdded(character)
+			-- Wait for character to fully load
+			local humanoid = character:WaitForChild("Humanoid", 10)
+			if not humanoid then return end
+			
+			-- Initial fix
+			task.wait(0.3)
+			GameModeDisabler.FixCharacterState(character)
+			
+			-- Continuous fix for a few seconds to override any other scripts
+			for i = 1, 20 do
+				task.wait(0.25)
+				GameModeDisabler.FixCharacterState(character)
+			end
+			
+			-- Also fix when state changes
+			humanoid.StateChanged:Connect(function(old, new)
+				if new == Enum.HumanoidStateType.PlatformStanding or
+				   new == Enum.HumanoidStateType.Seated then
+					task.wait(0.1)
+					GameModeDisabler.FixCharacterState(character)
+				end
+			end)
+		end
+		
+		player.CharacterAdded:Connect(onCharacterAdded)
+		if player.Character then
+			onCharacterAdded(player.Character)
+		end
+	end
+	
+	-- Handle all players
+	for _, player in ipairs(Players:GetPlayers()) do
+		setupPlayer(player)
+	end
+	Players.PlayerAdded:Connect(setupPlayer)
+	
+	print("[GameModeDisabler] Character fixer enabled")
+end
+
+function GameModeDisabler.Init()
+	print("[GameModeDisabler] Disabling game mode systems (keeping weapons)...")
+	
+	GameModeDisabler.DisableTeams()
+	GameModeDisabler.DisableGameplayScripts()
+	GameModeDisabler.DestroyAllExistingGuis()
+	GameModeDisabler.SetupCharacterFixer()
+	
+	-- Continuously destroy unwanted GUIs for players joining
+	Players.PlayerAdded:Connect(function(player)
+		player.Neutral = true
+		task.wait(1)
+		local playerGui = player:FindFirstChild("PlayerGui")
+		if playerGui then
+			for _, gui in ipairs(playerGui:GetChildren()) do
+				if gui:IsA("ScreenGui") and gui.Name ~= "GridfallUI" and gui.Name ~= "HUDScreen" and gui.Name ~= "InventoryScreen" and gui.Name ~= "LoadingScreen" then
+					gui:Destroy()
+				end
+			end
+		end
+	end)
+	
+	print("[GameModeDisabler] All existing game systems disabled")
+end
+
+return GameModeDisabler
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="18">
+        <Properties>
+          <string name="Name">InventoryManager</string>
+          <string name="Source"><![CDATA[-- Gridfall Inventory Manager
+-- Handles player inventories, equipment, and weapon state
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = require(ReplicatedStorage:WaitForChild("Shared"))
+local Constants = Shared.Constants
+local ItemData = Shared.ItemData
+local ArmorData = Shared.ArmorData
+local Types = Shared.Types
+
+local InventoryManager = {}
+
+-- Player inventories storage
+local playerInventories: {[Player]: Types.PlayerInventory} = {}
+
+function InventoryManager.CreateDefaultInventory(): Types.PlayerInventory
+	-- Give players starter gear
+	local starterWeapons = {
+		ItemData.GetWeaponById("kinetic_auto_1"),
+		ItemData.GetWeaponById("energy_smg_1"),
+		ItemData.GetWeaponById("power_rocket_1"),
+	}
+	
+	local starterArmor = {
+		ArmorData.GetArmorById("helmet_titan_1"),
+		ArmorData.GetArmorById("chest_titan_1"),
+		ArmorData.GetArmorById("arms_titan_1"),
+		ArmorData.GetArmorById("legs_titan_1"),
+		ArmorData.GetArmorById("class_titan_1"),
+	}
+	
+	local inventory: Types.PlayerInventory = {
+		Weapons = {},
+		Armor = {},
+		EquippedWeapons = {
+			Kinetic = nil,
+			Energy = nil,
+			Power = nil,
+		},
+		EquippedArmor = {
+			Helmet = nil,
+			Chest = nil,
+			Arms = nil,
+			Legs = nil,
+			Class = nil,
+		},
+		CurrentWeaponSlot = nil,
+	}
+	
+	-- Add starter weapons
+	for _, weapon in ipairs(starterWeapons) do
+		if weapon then
+			table.insert(inventory.Weapons, weapon)
+		end
+	end
+	
+	-- Add starter armor
+	for _, armor in ipairs(starterArmor) do
+		if armor then
+			table.insert(inventory.Armor, armor)
+		end
+	end
+	
+	-- Auto-equip starter gear
+	if inventory.Weapons[1] then
+		inventory.EquippedWeapons.Kinetic = inventory.Weapons[1]
+	end
+	if inventory.Weapons[2] then
+		inventory.EquippedWeapons.Energy = inventory.Weapons[2]
+	end
+	if inventory.Weapons[3] then
+		inventory.EquippedWeapons.Power = inventory.Weapons[3]
+	end
+	
+	for _, armor in ipairs(inventory.Armor) do
+		if armor then
+			inventory.EquippedArmor[armor.Slot] = armor
+		end
+	end
+	
+	return inventory
+end
+
+function InventoryManager.GetPlayerInventory(player: Player): Types.PlayerInventory?
+	return playerInventories[player]
+end
+
+function InventoryManager.EquipWeapon(player: Player, weaponId: string, slot: Types.WeaponSlot): boolean
+	local inventory = playerInventories[player]
+	if not inventory then return false end
+	
+	-- Find weapon in inventory
+	local weapon: Types.WeaponData? = nil
+	for _, w in ipairs(inventory.Weapons) do
+		if w.Id == weaponId then
+			weapon = w
+			break
+		end
+	end
+	
+	if not weapon then return false end
+	if weapon.Slot ~= slot then return false end
+	
+	-- Equip the weapon
+	inventory.EquippedWeapons[slot] = weapon
+	inventory.CurrentWeaponSlot = slot
+	
+	-- Fire event to client
+	local Remotes = ReplicatedStorage:FindFirstChild("Remotes")
+	if Remotes then
+		local event = Remotes:FindFirstChild("WeaponEquipped")
+		if event then
+			event:FireClient(player, weapon, slot)
+		end
+		
+		local updateEvent = Remotes:FindFirstChild("InventoryUpdated")
+		if updateEvent then
+			updateEvent:FireClient(player, inventory)
+		end
+	end
+	
+	return true
+end
+
+function InventoryManager.UnequipWeapon(player: Player): boolean
+	local inventory = playerInventories[player]
+	if not inventory then return false end
+	
+	inventory.CurrentWeaponSlot = nil
+	
+	-- Fire event to client
+	local Remotes = ReplicatedStorage:FindFirstChild("Remotes")
+	if Remotes then
+		local event = Remotes:FindFirstChild("WeaponUnequipped")
+		if event then
+			event:FireClient(player)
+		end
+	end
+	
+	return true
+end
+
+function InventoryManager.EquipArmor(player: Player, armorId: string): boolean
+	local inventory = playerInventories[player]
+	if not inventory then return false end
+	
+	-- Find armor in inventory
+	local armor: Types.ArmorData? = nil
+	for _, a in ipairs(inventory.Armor) do
+		if a.Id == armorId then
+			armor = a
+			break
+		end
+	end
+	
+	if not armor then return false end
+	
+	-- Equip the armor
+	inventory.EquippedArmor[armor.Slot] = armor
+	
+	-- Fire event to client
+	local Remotes = ReplicatedStorage:FindFirstChild("Remotes")
+	if Remotes then
+		local event = Remotes:FindFirstChild("ArmorEquipped")
+		if event then
+			event:FireClient(player, armor)
+		end
+		
+		local updateEvent = Remotes:FindFirstChild("InventoryUpdated")
+		if updateEvent then
+			updateEvent:FireClient(player, inventory)
+		end
+	end
+	
+	return true
+end
+
+function InventoryManager.SetupRemotes()
+	local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
+	if not Remotes then return end
+	
+	-- GetInventory
+	local getInventory = Remotes:FindFirstChild("GetInventory") :: RemoteFunction?
+	if getInventory then
+		getInventory.OnServerInvoke = function(player: Player)
+			return playerInventories[player]
+		end
+	end
+	
+	-- EquipWeapon
+	local equipWeapon = Remotes:FindFirstChild("EquipWeapon") :: RemoteFunction?
+	if equipWeapon then
+		equipWeapon.OnServerInvoke = function(player: Player, weaponId: string, slot: string)
+			return InventoryManager.EquipWeapon(player, weaponId, slot :: Types.WeaponSlot)
+		end
+	end
+	
+	-- UnequipWeapon
+	local unequipWeapon = Remotes:FindFirstChild("UnequipWeapon") :: RemoteFunction?
+	if unequipWeapon then
+		unequipWeapon.OnServerInvoke = function(player: Player)
+			return InventoryManager.UnequipWeapon(player)
+		end
+	end
+	
+	-- EquipArmor
+	local equipArmor = Remotes:FindFirstChild("EquipArmor") :: RemoteFunction?
+	if equipArmor then
+		equipArmor.OnServerInvoke = function(player: Player, armorId: string)
+			return InventoryManager.EquipArmor(player, armorId)
+		end
+	end
+end
+
+function InventoryManager.OnPlayerAdded(player: Player)
+	-- Create inventory for player
+	playerInventories[player] = InventoryManager.CreateDefaultInventory()
+	print("[InventoryManager] Created inventory for " .. player.Name)
+end
+
+function InventoryManager.OnPlayerRemoving(player: Player)
+	-- Save inventory here if needed (DataStore)
+	playerInventories[player] = nil
+end
+
+function InventoryManager.Init()
+	-- Setup remote handlers
+	task.spawn(InventoryManager.SetupRemotes)
+	
+	-- Connect player events
+	Players.PlayerAdded:Connect(InventoryManager.OnPlayerAdded)
+	Players.PlayerRemoving:Connect(InventoryManager.OnPlayerRemoving)
+	
+	-- Handle existing players
+	for _, player in ipairs(Players:GetPlayers()) do
+		InventoryManager.OnPlayerAdded(player)
+	end
+	
+	print("[InventoryManager] Initialized")
+end
+
+return InventoryManager
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="19">
+        <Properties>
+          <string name="Name">SpawnManager</string>
+          <string name="Source"><![CDATA[-- Gridfall Spawn Manager
+-- Handles player spawning at MainSpawn on Overheat map
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = require(ReplicatedStorage:WaitForChild("Shared"))
+local Constants = Shared.Constants
+
+local SpawnManager = {}
+
+local mainSpawn: SpawnLocation? = nil
+local overheatMap: Model? = nil
+
+function SpawnManager.FindMainSpawn()
+	-- Look for MainSpawn in Workspace
+	local workspace = game:GetService("Workspace")
+	
+	-- Find the Overheat map
+	overheatMap = workspace:FindFirstChild(Constants.SPAWN.DefaultMapName)
+	if not overheatMap then
+		warn("[SpawnManager] Overheat map not found in Workspace")
+	end
+	
+	-- Find MainSpawn
+	mainSpawn = workspace:FindFirstChild(Constants.SPAWN.MainSpawnName) :: SpawnLocation?
+	if not mainSpawn then
+		-- Try to find it as a descendant
+		mainSpawn = workspace:FindFirstChild(Constants.SPAWN.MainSpawnName, true) :: SpawnLocation?
+	end
+	
+	if mainSpawn then
+		-- Configure spawn
+		if mainSpawn:IsA("SpawnLocation") then
+			mainSpawn.Neutral = true
+			mainSpawn.AllowTeamChangeOnTouch = false
+			mainSpawn.Duration = 0
+		end
+		print("[SpawnManager] MainSpawn found and configured")
+	else
+		warn("[SpawnManager] MainSpawn not found - using default spawn")
+	end
+	
+	-- Disable other spawn locations
+	SpawnManager.DisableOtherSpawns()
+end
+
+function SpawnManager.DisableOtherSpawns()
+	local workspace = game:GetService("Workspace")
+	
+	-- Find SpawnLocations folder and disable spawns inside
+	local spawnLocations = workspace:FindFirstChild("SpawnLocations")
+	if spawnLocations then
+		for _, spawn in ipairs(spawnLocations:GetDescendants()) do
+			if spawn:IsA("SpawnLocation") and spawn ~= mainSpawn then
+				spawn.Enabled = false
+			end
+		end
+		print("[SpawnManager] Disabled spawns in SpawnLocations folder")
+	end
+	
+	-- Disable any other spawn locations that aren't MainSpawn
+	for _, spawn in ipairs(workspace:GetDescendants()) do
+		if spawn:IsA("SpawnLocation") and spawn ~= mainSpawn then
+			if spawn.Name ~= Constants.SPAWN.MainSpawnName then
+				spawn.Enabled = false
+			end
+		end
+	end
+end
+
+function SpawnManager.GetSpawnCFrame(): CFrame
+	if mainSpawn then
+		return mainSpawn.CFrame + Vector3.new(0, 3, 0)
+	end
+	
+	-- Fallback spawn position
+	return CFrame.new(0, 10, 0)
+end
+
+function SpawnManager.OnPlayerAdded(player: Player)
+	player.CharacterAdded:Connect(function(character)
+		-- Teleport to main spawn after a brief delay
+		task.wait(0.1)
+		local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
+		if humanoidRootPart then
+			humanoidRootPart.CFrame = SpawnManager.GetSpawnCFrame()
+		end
+	end)
+end
+
+function SpawnManager.Init()
+	-- Find spawn points
+	SpawnManager.FindMainSpawn()
+	
+	-- Set respawn time
+	Players.RespawnTime = Constants.SPAWN.RespawnTime
+	
+	-- Connect player events
+	Players.PlayerAdded:Connect(SpawnManager.OnPlayerAdded)
+	
+	-- Handle existing players
+	for _, player in ipairs(Players:GetPlayers()) do
+		SpawnManager.OnPlayerAdded(player)
+	end
+	
+	print("[SpawnManager] Initialized")
+end
+
+return SpawnManager
+]]></string>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Folder" referent="20">
+      <Properties>
+        <string name="Name">Utility</string>
+      </Properties>
+    </Item>
+  </Item>
+  <Item class="ServerStorage" referent="21">
+    <Properties>
+      <string name="Name">ServerStorage</string>
+    </Properties>
+    <Item class="Folder" referent="22">
+      <Properties>
+        <string name="Name">Laser Tag Template Library</string>
+      </Properties>
+    </Item>
+    <Item class="ModuleScript" referent="23">
+      <Properties>
+        <string name="Name">ServerStorage</string>
+        <string name="Source"><![CDATA[-- Gridfall Server Storage
+-- Server-only assets and data
+
+local ServerStorage = {}
+
+-- Placeholder for server-only weapon models
+ServerStorage.WeaponModels = {}
+
+-- Placeholder for server-only armor models  
+ServerStorage.ArmorModels = {}
+
+-- Placeholder for NPC data
+ServerStorage.NPCData = {}
+
+return ServerStorage
+]]></string>
+      </Properties>
+    </Item>
+  </Item>
+  <Item class="SoundService" referent="24">
+    <Properties>
+      <string name="Name">SoundService</string>
+      <bool name="RespectFilteringEnabled">true</bool>
+    </Properties>
+  </Item>
+  <Item class="StarterGui" referent="25">
+    <Properties>
+      <string name="Name">StarterGui</string>
+    </Properties>
+    <Item class="LocalScript" referent="26">
+      <Properties>
+        <string name="Name">GridfallUI</string>
+        <string name="Source"><![CDATA[-- Gridfall UI LocalScript
+-- DISABLED - UI is now handled in main client script
+-- This prevents duplicate HUDs
+
+print("[UI] UI module disabled - using unified client script")
+]]></string>
+      </Properties>
+      <Item class="ModuleScript" referent="27">
+        <Properties>
+          <string name="Name">HUD</string>
+          <string name="Source"><![CDATA[-- Gridfall HUD Component
+-- Destiny 2-style heads-up display
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local Shared = require(ReplicatedStorage:WaitForChild("Shared"))
+local Constants = Shared.Constants
+
+local HUD = {}
+
+local player = Players.LocalPlayer
+local hudScreen: ScreenGui? = nil
+
+-- UI References
+local weaponFrame: Frame?
+local superFrame: Frame?
+local ammoDisplay: Frame?
+local healthBar: Frame?
+local abilityBar: Frame?
+
+-- Colors
+local primaryColor = Constants.UI.PrimaryColor
+local secondaryColor = Constants.UI.SecondaryColor
+local bgColor = Constants.UI.BackgroundColor
+local textColor = Constants.UI.TextColor
+
+local function createCorner(parent: GuiObject, radius: number?)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, radius or 4)
+	corner.Parent = parent
+	return corner
+end
+
+local function createStroke(parent: GuiObject, color: Color3?, thickness: number?)
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = color or Color3.fromRGB(80, 90, 100)
+	stroke.Thickness = thickness or 1
+	stroke.Transparency = 0.5
+	stroke.Parent = parent
+	return stroke
+end
+
+local function createGradient(parent: GuiObject, rotation: number?)
+	local gradient = Instance.new("UIGradient")
+	gradient.Rotation = rotation or 90
+	gradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 180, 180)),
+	})
+	gradient.Parent = parent
+	return gradient
+end
+
+function HUD.CreateWeaponSlots(parent: Frame): Frame
+	local container = Instance.new("Frame")
+	container.Name = "WeaponSlots"
+	container.Size = UDim2.new(0, 200, 0, 70)
+	container.Position = UDim2.new(0, 30, 1, -90)
+	container.BackgroundTransparency = 1
+	container.Parent = parent
+	
+	-- Create 3 weapon slots (Kinetic, Energy, Power)
+	local slotNames = {"Kinetic", "Energy", "Power"}
+	local slotColors = {
+		Color3.fromRGB(200, 200, 200), -- Kinetic - White/Gray
+		primaryColor, -- Energy - Cyan
+		Color3.fromRGB(120, 80, 180), -- Power - Purple
+	}
+	
+	for i, slotName in ipairs(slotNames) do
+		local slot = Instance.new("Frame")
+		slot.Name = slotName .. "Slot"
+		slot.Size = UDim2.new(0, 58, 0, 58)
+		slot.Position = UDim2.new(0, (i - 1) * 65, 0, 0)
+		slot.BackgroundColor3 = bgColor
+		slot.BackgroundTransparency = 0.3
+		slot.Parent = container
+		createCorner(slot, 6)
+		createStroke(slot, slotColors[i], 2)
+		
+		-- Slot number
+		local numLabel = Instance.new("TextLabel")
+		numLabel.Name = "SlotNumber"
+		numLabel.Size = UDim2.new(0, 16, 0, 16)
+		numLabel.Position = UDim2.new(0, 2, 0, 2)
+		numLabel.BackgroundColor3 = slotColors[i]
+		numLabel.BackgroundTransparency = 0.2
+		numLabel.Text = tostring(i)
+		numLabel.TextColor3 = Color3.new(1, 1, 1)
+		numLabel.TextSize = 11
+		numLabel.Font = Enum.Font.GothamBold
+		numLabel.Parent = slot
+		createCorner(numLabel, 3)
+		
+		-- Weapon icon placeholder
+		local icon = Instance.new("ImageLabel")
+		icon.Name = "WeaponIcon"
+		icon.Size = UDim2.new(0, 40, 0, 40)
+		icon.Position = UDim2.new(0.5, -20, 0.5, -15)
+		icon.BackgroundTransparency = 1
+		icon.Image = ""
+		icon.ImageColor3 = Color3.new(1, 1, 1)
+		icon.Parent = slot
+	end
+	
+	return container
+end
+
+function HUD.CreateAmmoDisplay(parent: Frame): Frame
+	local container = Instance.new("Frame")
+	container.Name = "AmmoDisplay"
+	container.Size = UDim2.new(0, 140, 0, 60)
+	container.Position = UDim2.new(1, -170, 1, -80)
+	container.BackgroundColor3 = bgColor
+	container.BackgroundTransparency = 0.4
+	container.Parent = parent
+	createCorner(container, 8)
+	createStroke(container, primaryColor, 1)
+	
+	-- Current ammo (large)
+	local currentAmmo = Instance.new("TextLabel")
+	currentAmmo.Name = "CurrentAmmo"
+	currentAmmo.Size = UDim2.new(0.6, 0, 0.7, 0)
+	currentAmmo.Position = UDim2.new(0.05, 0, 0.1, 0)
+	currentAmmo.BackgroundTransparency = 1
+	currentAmmo.Text = "40"
+	currentAmmo.TextColor3 = textColor
+	currentAmmo.TextSize = 36
+	currentAmmo.TextXAlignment = Enum.TextXAlignment.Left
+	currentAmmo.Font = Enum.Font.GothamBold
+	currentAmmo.Parent = container
+	
+	-- Reserve ammo
+	local reserveAmmo = Instance.new("TextLabel")
+	reserveAmmo.Name = "ReserveAmmo"
+	reserveAmmo.Size = UDim2.new(0.35, 0, 0.4, 0)
+	reserveAmmo.Position = UDim2.new(0.6, 0, 0.55, 0)
+	reserveAmmo.BackgroundTransparency = 1
+	reserveAmmo.Text = "/ 320"
+	reserveAmmo.TextColor3 = Color3.fromRGB(180, 180, 180)
+	reserveAmmo.TextSize = 16
+	reserveAmmo.TextXAlignment = Enum.TextXAlignment.Left
+	reserveAmmo.Font = Enum.Font.Gotham
+	reserveAmmo.Parent = container
+	
+	-- Weapon type indicator
+	local weaponType = Instance.new("TextLabel")
+	weaponType.Name = "WeaponType"
+	weaponType.Size = UDim2.new(0.9, 0, 0.25, 0)
+	weaponType.Position = UDim2.new(0.05, 0, 0.02, 0)
+	weaponType.BackgroundTransparency = 1
+	weaponType.Text = "AUTO RIFLE"
+	weaponType.TextColor3 = primaryColor
+	weaponType.TextSize = 10
+	weaponType.TextXAlignment = Enum.TextXAlignment.Left
+	weaponType.Font = Enum.Font.GothamBold
+	weaponType.Parent = container
+	
+	return container
+end
+
+function HUD.CreateSuperAbility(parent: Frame): Frame
+	local container = Instance.new("Frame")
+	container.Name = "SuperAbility"
+	container.Size = UDim2.new(0, 70, 0, 70)
+	container.Position = UDim2.new(0.5, -35, 1, -90)
+	container.BackgroundColor3 = bgColor
+	container.BackgroundTransparency = 0.3
+	container.Parent = parent
+	createCorner(container, 35) -- Circular
+	createStroke(container, secondaryColor, 3)
+	
+	-- Super icon
+	local icon = Instance.new("ImageLabel")
+	icon.Name = "SuperIcon"
+	icon.Size = UDim2.new(0.6, 0, 0.6, 0)
+	icon.Position = UDim2.new(0.2, 0, 0.2, 0)
+	icon.BackgroundTransparency = 1
+	icon.Image = "rbxassetid://6031075938" -- Diamond shape placeholder
+	icon.ImageColor3 = secondaryColor
+	icon.Parent = container
+	
+	-- Progress ring (simulated with frame)
+	local progress = Instance.new("Frame")
+	progress.Name = "ProgressRing"
+	progress.Size = UDim2.new(1, 6, 1, 6)
+	progress.Position = UDim2.new(0, -3, 0, -3)
+	progress.BackgroundTransparency = 1
+	progress.Parent = container
+	
+	return container
+end
+
+function HUD.CreateAbilities(parent: Frame): Frame
+	local container = Instance.new("Frame")
+	container.Name = "Abilities"
+	container.Size = UDim2.new(0, 180, 0, 45)
+	container.Position = UDim2.new(0.5, -90, 1, -45)
+	container.BackgroundTransparency = 1
+	container.Parent = parent
+	
+	local abilityNames = {"Grenade", "Melee", "Class"}
+	local abilityKeys = {"Q", "C", "V"}
+	
+	for i, name in ipairs(abilityNames) do
+		local ability = Instance.new("Frame")
+		ability.Name = name
+		ability.Size = UDim2.new(0, 50, 0, 40)
+		ability.Position = UDim2.new(0, (i - 1) * 60 + 5, 0, 0)
+		ability.BackgroundColor3 = bgColor
+		ability.BackgroundTransparency = 0.4
+		ability.Parent = container
+		createCorner(ability, 6)
+		createStroke(ability, primaryColor, 1)
+		
+		-- Key binding
+		local keyLabel = Instance.new("TextLabel")
+		keyLabel.Name = "KeyBind"
+		keyLabel.Size = UDim2.new(1, 0, 0.4, 0)
+		keyLabel.Position = UDim2.new(0, 0, 0.55, 0)
+		keyLabel.BackgroundTransparency = 1
+		keyLabel.Text = abilityKeys[i]
+		keyLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+		keyLabel.TextSize = 10
+		keyLabel.Font = Enum.Font.GothamBold
+		keyLabel.Parent = ability
+	end
+	
+	return container
+end
+
+function HUD.CreateHealthBar(parent: Frame): Frame
+	local container = Instance.new("Frame")
+	container.Name = "HealthBar"
+	container.Size = UDim2.new(0, 200, 0, 8)
+	container.Position = UDim2.new(0, 30, 1, -100)
+	container.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	container.BackgroundTransparency = 0.3
+	container.Parent = parent
+	createCorner(container, 4)
+	
+	-- Health fill
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.Size = UDim2.new(1, 0, 1, 0)
+	fill.Position = UDim2.new(0, 0, 0, 0)
+	fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	fill.Parent = container
+	createCorner(fill, 4)
+	createGradient(fill, 0)
+	
+	return container
+end
+
+function HUD.CreatePowerLevel(parent: Frame): Frame
+	local container = Instance.new("Frame")
+	container.Name = "PowerLevel"
+	container.Size = UDim2.new(0, 100, 0, 40)
+	container.Position = UDim2.new(1, -130, 1, -140)
+	container.BackgroundTransparency = 1
+	container.Parent = parent
+	
+	-- Power icon (star)
+	local icon = Instance.new("TextLabel")
+	icon.Name = "Icon"
+	icon.Size = UDim2.new(0, 20, 0, 20)
+	icon.Position = UDim2.new(0, 0, 0.5, -10)
+	icon.BackgroundTransparency = 1
+	icon.Text = "✦"
+	icon.TextColor3 = secondaryColor
+	icon.TextSize = 18
+	icon.Font = Enum.Font.GothamBold
+	icon.Parent = container
+	
+	-- Power number
+	local powerNum = Instance.new("TextLabel")
+	powerNum.Name = "PowerNumber"
+	powerNum.Size = UDim2.new(0, 70, 0, 30)
+	powerNum.Position = UDim2.new(0, 25, 0.5, -15)
+	powerNum.BackgroundTransparency = 1
+	powerNum.Text = "1350"
+	powerNum.TextColor3 = secondaryColor
+	powerNum.TextSize = 24
+	powerNum.TextXAlignment = Enum.TextXAlignment.Left
+	powerNum.Font = Enum.Font.GothamBold
+	powerNum.Parent = container
+	
+	return container
+end
+
+function HUD.CreateCrosshair(parent: Frame): Frame
+	local container = Instance.new("Frame")
+	container.Name = "Crosshair"
+	container.Size = UDim2.new(0, 30, 0, 30)
+	container.Position = UDim2.new(0.5, -15, 0.5, -15)
+	container.BackgroundTransparency = 1
+	container.Parent = parent
+	
+	-- Center dot
+	local dot = Instance.new("Frame")
+	dot.Name = "Dot"
+	dot.Size = UDim2.new(0, 4, 0, 4)
+	dot.Position = UDim2.new(0.5, -2, 0.5, -2)
+	dot.BackgroundColor3 = Color3.new(1, 1, 1)
+	dot.Parent = container
+	createCorner(dot, 2)
+	
+	-- Crosshair lines
+	local directions = {
+		{size = UDim2.new(0, 2, 0, 8), pos = UDim2.new(0.5, -1, 0, 2)}, -- Top
+		{size = UDim2.new(0, 2, 0, 8), pos = UDim2.new(0.5, -1, 1, -10)}, -- Bottom
+		{size = UDim2.new(0, 8, 0, 2), pos = UDim2.new(0, 2, 0.5, -1)}, -- Left
+		{size = UDim2.new(0, 8, 0, 2), pos = UDim2.new(1, -10, 0.5, -1)}, -- Right
+	}
+	
+	for i, dir in ipairs(directions) do
+		local line = Instance.new("Frame")
+		line.Name = "Line" .. i
+		line.Size = dir.size
+		line.Position = dir.pos
+		line.BackgroundColor3 = Color3.new(1, 1, 1)
+		line.BackgroundTransparency = 0.2
+		line.Parent = container
+	end
+	
+	return container
+end
+
+function HUD.Create(playerGui: PlayerGui): ScreenGui
+	-- Create main screen
+	local screen = Instance.new("ScreenGui")
+	screen.Name = "HUDScreen"
+	screen.ResetOnSpawn = false
+	screen.IgnoreGuiInset = true
+	screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	screen.Parent = playerGui
+	hudScreen = screen
+	
+	-- Main container
+	local main = Instance.new("Frame")
+	main.Name = "Main"
+	main.Size = UDim2.new(1, 0, 1, 0)
+	main.BackgroundTransparency = 1
+	main.Parent = screen
+	
+	-- Create HUD elements
+	weaponFrame = HUD.CreateWeaponSlots(main)
+	ammoDisplay = HUD.CreateAmmoDisplay(main)
+	superFrame = HUD.CreateSuperAbility(main)
+	abilityBar = HUD.CreateAbilities(main)
+	healthBar = HUD.CreateHealthBar(main)
+	HUD.CreatePowerLevel(main)
+	HUD.CreateCrosshair(main)
+	
+	print("[HUD] Created Destiny-style HUD")
+	return screen
+end
+
+return HUD
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="28">
+        <Properties>
+          <string name="Name">Inventory</string>
+          <string name="Source"><![CDATA[-- Gridfall Inventory Component
+-- Destiny 2-style inventory and equipment screen (Tab to open)
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local Shared = require(ReplicatedStorage:WaitForChild("Shared"))
+local Constants = Shared.Constants
+
+local Inventory = {}
+
+local player = Players.LocalPlayer
+local inventoryScreen: ScreenGui? = nil
+
+-- Colors
+local primaryColor = Constants.UI.PrimaryColor
+local secondaryColor = Constants.UI.SecondaryColor
+local bgColor = Constants.UI.BackgroundColor
+local textColor = Constants.UI.TextColor
+local rarityColors = Constants.UI.RarityColors
+
+local function createCorner(parent: GuiObject, radius: number?)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, radius or 4)
+	corner.Parent = parent
+	return corner
+end
+
+local function createStroke(parent: GuiObject, color: Color3?, thickness: number?)
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = color or Color3.fromRGB(60, 70, 80)
+	stroke.Thickness = thickness or 1
+	stroke.Transparency = 0.3
+	stroke.Parent = parent
+	return stroke
+end
+
+local function createShadow(parent: GuiObject)
+	local shadow = Instance.new("ImageLabel")
+	shadow.Name = "Shadow"
+	shadow.Size = UDim2.new(1, 20, 1, 20)
+	shadow.Position = UDim2.new(0, -10, 0, -10)
+	shadow.BackgroundTransparency = 1
+	shadow.Image = "rbxassetid://5554236805"
+	shadow.ImageColor3 = Color3.new(0, 0, 0)
+	shadow.ImageTransparency = 0.6
+	shadow.ScaleType = Enum.ScaleType.Slice
+	shadow.SliceCenter = Rect.new(23, 23, 277, 277)
+	shadow.ZIndex = parent.ZIndex - 1
+	shadow.Parent = parent
+	return shadow
+end
+
+function Inventory.CreateHeader(parent: Frame): Frame
+	local header = Instance.new("Frame")
+	header.Name = "Header"
+	header.Size = UDim2.new(1, 0, 0, 80)
+	header.Position = UDim2.new(0, 0, 0, 0)
+	header.BackgroundTransparency = 1
+	header.Parent = parent
+	
+	-- Player name
+	local playerName = Instance.new("TextLabel")
+	playerName.Name = "PlayerName"
+	playerName.Size = UDim2.new(0, 300, 0, 35)
+	playerName.Position = UDim2.new(0, 40, 0, 15)
+	playerName.BackgroundTransparency = 1
+	playerName.Text = string.upper(player.Name)
+	playerName.TextColor3 = textColor
+	playerName.TextSize = 28
+	playerName.TextXAlignment = Enum.TextXAlignment.Left
+	playerName.Font = Enum.Font.GothamBold
+	playerName.Parent = header
+	
+	-- Level info
+	local levelInfo = Instance.new("TextLabel")
+	levelInfo.Name = "LevelInfo"
+	levelInfo.Size = UDim2.new(0, 200, 0, 20)
+	levelInfo.Position = UDim2.new(0, 40, 0, 48)
+	levelInfo.BackgroundTransparency = 1
+	levelInfo.Text = "// LEVEL 50 ✦1350"
+	levelInfo.TextColor3 = Color3.fromRGB(150, 150, 150)
+	levelInfo.TextSize = 14
+	levelInfo.TextXAlignment = Enum.TextXAlignment.Left
+	levelInfo.Font = Enum.Font.Gotham
+	levelInfo.Parent = header
+	
+	-- Tab buttons (Character, Inventory, Settings)
+	local tabs = Instance.new("Frame")
+	tabs.Name = "Tabs"
+	tabs.Size = UDim2.new(0, 400, 0, 30)
+	tabs.Position = UDim2.new(0.5, -50, 0, 25)
+	tabs.BackgroundTransparency = 1
+	tabs.Parent = header
+	
+	local tabNames = {"CHARACTER", "INVENTORY", "SETTINGS"}
+	for i, name in ipairs(tabNames) do
+		local tab = Instance.new("TextButton")
+		tab.Name = name
+		tab.Size = UDim2.new(0, 120, 0, 30)
+		tab.Position = UDim2.new(0, (i - 1) * 130, 0, 0)
+		tab.BackgroundTransparency = 1
+		tab.Text = name
+		tab.TextColor3 = i == 1 and textColor or Color3.fromRGB(120, 120, 120)
+		tab.TextSize = 14
+		tab.Font = Enum.Font.GothamBold
+		tab.Parent = tabs
+		
+		if i == 1 then
+			local underline = Instance.new("Frame")
+			underline.Name = "Underline"
+			underline.Size = UDim2.new(1, 0, 0, 2)
+			underline.Position = UDim2.new(0, 0, 1, 2)
+			underline.BackgroundColor3 = textColor
+			underline.Parent = tab
+		end
+	end
+	
+	-- Currencies
+	local currencies = Instance.new("Frame")
+	currencies.Name = "Currencies"
+	currencies.Size = UDim2.new(0, 250, 0, 25)
+	currencies.Position = UDim2.new(1, -290, 0, 25)
+	currencies.BackgroundTransparency = 1
+	currencies.Parent = header
+	
+	local currencyTypes = {
+		{icon = "●", color = Color3.fromRGB(200, 200, 200), value = "000000"},
+		{icon = "◆", color = primaryColor, value = "000"},
+		{icon = "★", color = secondaryColor, value = "000"},
+	}
+	
+	for i, curr in ipairs(currencyTypes) do
+		local currFrame = Instance.new("Frame")
+		currFrame.Size = UDim2.new(0, 75, 0, 20)
+		currFrame.Position = UDim2.new(0, (i - 1) * 80, 0, 0)
+		currFrame.BackgroundTransparency = 1
+		currFrame.Parent = currencies
+		
+		local icon = Instance.new("TextLabel")
+		icon.Size = UDim2.new(0, 15, 0, 20)
+		icon.BackgroundTransparency = 1
+		icon.Text = curr.icon
+		icon.TextColor3 = curr.color
+		icon.TextSize = 12
+		icon.Font = Enum.Font.GothamBold
+		icon.Parent = currFrame
+		
+		local value = Instance.new("TextLabel")
+		value.Size = UDim2.new(0, 55, 0, 20)
+		value.Position = UDim2.new(0, 18, 0, 0)
+		value.BackgroundTransparency = 1
+		value.Text = curr.value
+		value.TextColor3 = textColor
+		value.TextSize = 12
+		value.TextXAlignment = Enum.TextXAlignment.Left
+		value.Font = Enum.Font.Gotham
+		value.Parent = currFrame
+	end
+	
+	return header
+end
+
+function Inventory.CreateCharacterPreview(parent: Frame): Frame
+	local preview = Instance.new("Frame")
+	preview.Name = "CharacterPreview"
+	preview.Size = UDim2.new(0, 350, 0, 500)
+	preview.Position = UDim2.new(0.5, -175, 0.5, -220)
+	preview.BackgroundColor3 = Color3.fromRGB(15, 18, 25)
+	preview.BackgroundTransparency = 0.3
+	preview.Parent = parent
+	createCorner(preview, 8)
+	createStroke(preview, Color3.fromRGB(40, 50, 60), 1)
+	
+	-- Class emblem
+	local emblem = Instance.new("Frame")
+	emblem.Name = "ClassEmblem"
+	emblem.Size = UDim2.new(0, 80, 0, 80)
+	emblem.Position = UDim2.new(0.5, -40, 0, 30)
+	emblem.BackgroundColor3 = secondaryColor
+	emblem.BackgroundTransparency = 0.7
+	emblem.Parent = preview
+	createCorner(emblem, 40)
+	
+	local emblemIcon = Instance.new("TextLabel")
+	emblemIcon.Size = UDim2.new(1, 0, 1, 0)
+	emblemIcon.BackgroundTransparency = 1
+	emblemIcon.Text = "⬡"
+	emblemIcon.TextColor3 = secondaryColor
+	emblemIcon.TextSize = 40
+	emblemIcon.Font = Enum.Font.GothamBold
+	emblemIcon.Parent = emblem
+	
+	-- ViewportFrame for character model
+	local viewport = Instance.new("ViewportFrame")
+	viewport.Name = "CharacterViewport"
+	viewport.Size = UDim2.new(0.9, 0, 0.65, 0)
+	viewport.Position = UDim2.new(0.05, 0, 0.2, 0)
+	viewport.BackgroundTransparency = 1
+	viewport.Parent = preview
+	
+	-- Stats display
+	local stats = Instance.new("Frame")
+	stats.Name = "Stats"
+	stats.Size = UDim2.new(0, 150, 0, 100)
+	stats.Position = UDim2.new(1, 20, 0, 130)
+	stats.BackgroundTransparency = 1
+	stats.Parent = preview
+	
+	-- Power level
+	local powerFrame = Instance.new("Frame")
+	powerFrame.Name = "Power"
+	powerFrame.Size = UDim2.new(1, 0, 0, 30)
+	powerFrame.BackgroundTransparency = 1
+	powerFrame.Parent = stats
+	
+	local powerIcon = Instance.new("TextLabel")
+	powerIcon.Size = UDim2.new(0, 20, 0, 30)
+	powerIcon.BackgroundTransparency = 1
+	powerIcon.Text = "✦"
+	powerIcon.TextColor3 = secondaryColor
+	powerIcon.TextSize = 16
+	powerIcon.Font = Enum.Font.GothamBold
+	powerIcon.Parent = powerFrame
+	
+	local powerLabel = Instance.new("TextLabel")
+	powerLabel.Name = "PowerLabel"
+	powerLabel.Size = UDim2.new(0, 50, 0, 15)
+	powerLabel.Position = UDim2.new(0, 22, 0, 0)
+	powerLabel.BackgroundTransparency = 1
+	powerLabel.Text = "POWER"
+	powerLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+	powerLabel.TextSize = 10
+	powerLabel.TextXAlignment = Enum.TextXAlignment.Left
+	powerLabel.Font = Enum.Font.Gotham
+	powerLabel.Parent = powerFrame
+	
+	local powerValue = Instance.new("TextLabel")
+	powerValue.Name = "PowerValue"
+	powerValue.Size = UDim2.new(0, 60, 0, 20)
+	powerValue.Position = UDim2.new(0, 22, 0, 12)
+	powerValue.BackgroundTransparency = 1
+	powerValue.Text = "1350"
+	powerValue.TextColor3 = secondaryColor
+	powerValue.TextSize = 18
+	powerValue.TextXAlignment = Enum.TextXAlignment.Left
+	powerValue.Font = Enum.Font.GothamBold
+	powerValue.Parent = powerFrame
+	
+	-- Stat bars
+	local statTypes = {
+		{name = "Mobility", icon = "⚡", value = 99},
+		{name = "Resilience", icon = "🛡", value = 99},
+		{name = "Recovery", icon = "♥", value = 99},
+	}
+	
+	for i, stat in ipairs(statTypes) do
+		local statFrame = Instance.new("Frame")
+		statFrame.Name = stat.name
+		statFrame.Size = UDim2.new(1, 0, 0, 20)
+		statFrame.Position = UDim2.new(0, 0, 0, 35 + (i * 22))
+		statFrame.BackgroundTransparency = 1
+		statFrame.Parent = stats
+		
+		local statLabel = Instance.new("TextLabel")
+		statLabel.Size = UDim2.new(0, 80, 0, 15)
+		statLabel.BackgroundTransparency = 1
+		statLabel.Text = stat.name .. " " .. stat.icon
+		statLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+		statLabel.TextSize = 11
+		statLabel.TextXAlignment = Enum.TextXAlignment.Left
+		statLabel.Font = Enum.Font.Gotham
+		statLabel.Parent = statFrame
+		
+		local statValue = Instance.new("TextLabel")
+		statValue.Size = UDim2.new(0, 30, 0, 15)
+		statValue.Position = UDim2.new(1, -30, 0, 0)
+		statValue.BackgroundTransparency = 1
+		statValue.Text = tostring(stat.value)
+		statValue.TextColor3 = textColor
+		statValue.TextSize = 12
+		statValue.TextXAlignment = Enum.TextXAlignment.Right
+		statValue.Font = Enum.Font.GothamBold
+		statValue.Parent = statFrame
+	end
+	
+	return preview
+end
+
+function Inventory.CreateItemSlot(parent: Frame, slotType: string, position: UDim2, size: UDim2?): Frame
+	local slot = Instance.new("Frame")
+	slot.Name = slotType .. "Slot"
+	slot.Size = size or UDim2.new(0, 70, 0, 70)
+	slot.Position = position
+	slot.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
+	slot.BackgroundTransparency = 0.2
+	slot.Parent = parent
+	createCorner(slot, 6)
+	createStroke(slot, Color3.fromRGB(60, 70, 80), 1)
+	
+	-- Rarity bar (bottom)
+	local rarityBar = Instance.new("Frame")
+	rarityBar.Name = "RarityBar"
+	rarityBar.Size = UDim2.new(0.8, 0, 0, 3)
+	rarityBar.Position = UDim2.new(0.1, 0, 1, -8)
+	rarityBar.BackgroundColor3 = rarityColors.Legendary
+	rarityBar.Parent = slot
+	createCorner(rarityBar, 2)
+	
+	-- Item icon
+	local icon = Instance.new("ImageLabel")
+	icon.Name = "ItemIcon"
+	icon.Size = UDim2.new(0.75, 0, 0.75, 0)
+	icon.Position = UDim2.new(0.125, 0, 0.08, 0)
+	icon.BackgroundTransparency = 1
+	icon.Image = ""
+	icon.Parent = slot
+	
+	-- Power level badge
+	local powerBadge = Instance.new("TextLabel")
+	powerBadge.Name = "PowerBadge"
+	powerBadge.Size = UDim2.new(0, 30, 0, 14)
+	powerBadge.Position = UDim2.new(0.5, -15, 0, 2)
+	powerBadge.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	powerBadge.BackgroundTransparency = 0.5
+	powerBadge.Text = "1350"
+	powerBadge.TextColor3 = textColor
+	powerBadge.TextSize = 9
+	powerBadge.Font = Enum.Font.GothamBold
+	powerBadge.Parent = slot
+	createCorner(powerBadge, 3)
+	
+	-- Hover effect
+	local hoverFrame = Instance.new("Frame")
+	hoverFrame.Name = "Hover"
+	hoverFrame.Size = UDim2.new(1, 4, 1, 4)
+	hoverFrame.Position = UDim2.new(0, -2, 0, -2)
+	hoverFrame.BackgroundTransparency = 1
+	hoverFrame.Visible = false
+	hoverFrame.Parent = slot
+	createCorner(hoverFrame, 8)
+	createStroke(hoverFrame, primaryColor, 2)
+	
+	-- Button for interaction
+	local button = Instance.new("TextButton")
+	button.Name = "Button"
+	button.Size = UDim2.new(1, 0, 1, 0)
+	button.BackgroundTransparency = 1
+	button.Text = ""
+	button.Parent = slot
+	
+	button.MouseEnter:Connect(function()
+		hoverFrame.Visible = true
+	end)
+	
+	button.MouseLeave:Connect(function()
+		hoverFrame.Visible = false
+	end)
+	
+	return slot
+end
+
+function Inventory.CreateWeaponSlots(parent: Frame): Frame
+	local container = Instance.new("Frame")
+	container.Name = "WeaponSlots"
+	container.Size = UDim2.new(0, 100, 0, 250)
+	container.Position = UDim2.new(0, 40, 0.5, -95)
+	container.BackgroundTransparency = 1
+	container.Parent = parent
+	
+	-- Weapon slot labels
+	local slotTypes = {"Kinetic", "Energy", "Power"}
+	
+	for i, slotType in ipairs(slotTypes) do
+		local yPos = (i - 1) * 85
+		Inventory.CreateItemSlot(container, slotType, UDim2.new(0, 0, 0, yPos), UDim2.new(0, 75, 0, 75))
+		
+		-- Slot label
+		local label = Instance.new("TextLabel")
+		label.Name = slotType .. "Label"
+		label.Size = UDim2.new(0, 75, 0, 12)
+		label.Position = UDim2.new(0, 0, 0, yPos + 77)
+		label.BackgroundTransparency = 1
+		label.Text = string.upper(slotType)
+		label.TextColor3 = Color3.fromRGB(100, 100, 100)
+		label.TextSize = 9
+		label.Font = Enum.Font.GothamBold
+		label.Parent = container
+	end
+	
+	return container
+end
+
+function Inventory.CreateArmorSlots(parent: Frame): Frame
+	local container = Instance.new("Frame")
+	container.Name = "ArmorSlots"
+	container.Size = UDim2.new(0, 100, 0, 400)
+	container.Position = UDim2.new(1, -140, 0.5, -170)
+	container.BackgroundTransparency = 1
+	container.Parent = parent
+	
+	-- Armor slot types
+	local slotTypes = {"Helmet", "Arms", "Chest", "Legs", "Class"}
+	
+	for i, slotType in ipairs(slotTypes) do
+		local yPos = (i - 1) * 78
+		Inventory.CreateItemSlot(container, slotType, UDim2.new(0, 0, 0, yPos), UDim2.new(0, 70, 0, 70))
+	end
+	
+	return container
+end
+
+function Inventory.CreateInventoryGrid(parent: Frame): Frame
+	local container = Instance.new("Frame")
+	container.Name = "InventoryGrid"
+	container.Size = UDim2.new(0, 320, 0, 400)
+	container.Position = UDim2.new(0, 40, 0, 100)
+	container.BackgroundColor3 = Color3.fromRGB(18, 22, 30)
+	container.BackgroundTransparency = 0.3
+	container.Parent = parent
+	createCorner(container, 8)
+	
+	-- Section label
+	local label = Instance.new("TextLabel")
+	label.Name = "SectionLabel"
+	label.Size = UDim2.new(1, 0, 0, 25)
+	label.Position = UDim2.new(0, 0, 0, -30)
+	label.BackgroundTransparency = 1
+	label.Text = "/ENERGY"
+	label.TextColor3 = Color3.fromRGB(120, 120, 120)
+	label.TextSize = 12
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Font = Enum.Font.GothamBold
+	label.Parent = container
+	
+	-- Grid layout
+	local grid = Instance.new("UIGridLayout")
+	grid.CellSize = UDim2.new(0, 65, 0, 65)
+	grid.CellPadding = UDim2.new(0, 8, 0, 8)
+	grid.SortOrder = Enum.SortOrder.LayoutOrder
+	grid.Parent = container
+	
+	local padding = Instance.new("UIPadding")
+	padding.PaddingTop = UDim.new(0, 10)
+	padding.PaddingLeft = UDim.new(0, 10)
+	padding.Parent = container
+	
+	-- Create 9 inventory slots
+	for i = 1, 9 do
+		local slot = Instance.new("Frame")
+		slot.Name = "Slot" .. i
+		slot.Size = UDim2.new(0, 65, 0, 65)
+		slot.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+		slot.BackgroundTransparency = 0.3
+		slot.LayoutOrder = i
+		slot.Parent = container
+		createCorner(slot, 4)
+		createStroke(slot, Color3.fromRGB(50, 55, 65), 1)
+		
+		-- Rarity indicator
+		local rarity = Instance.new("Frame")
+		rarity.Name = "Rarity"
+		rarity.Size = UDim2.new(0.7, 0, 0, 2)
+		rarity.Position = UDim2.new(0.15, 0, 1, -6)
+		rarity.BackgroundColor3 = rarityColors.Legendary
+		rarity.Parent = slot
+		createCorner(rarity, 1)
+	end
+	
+	return container
+end
+
+function Inventory.CreateDismissButton(parent: Frame): TextButton
+	local button = Instance.new("TextButton")
+	button.Name = "DismissButton"
+	button.Size = UDim2.new(0, 120, 0, 30)
+	button.Position = UDim2.new(0.5, -60, 1, -50)
+	button.BackgroundTransparency = 1
+	button.Text = "○ Dismiss"
+	button.TextColor3 = Color3.fromRGB(150, 150, 150)
+	button.TextSize = 14
+	button.Font = Enum.Font.Gotham
+	button.Parent = parent
+	
+	return button
+end
+
+function Inventory.Create(playerGui: PlayerGui): ScreenGui
+	-- Create main screen
+	local screen = Instance.new("ScreenGui")
+	screen.Name = "InventoryScreen"
+	screen.ResetOnSpawn = false
+	screen.IgnoreGuiInset = true
+	screen.Enabled = false -- Start hidden
+	screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	screen.Parent = playerGui
+	inventoryScreen = screen
+	
+	-- Background blur effect
+	local blur = Instance.new("Frame")
+	blur.Name = "Blur"
+	blur.Size = UDim2.new(1, 0, 1, 0)
+	blur.BackgroundColor3 = Color3.fromRGB(5, 8, 15)
+	blur.BackgroundTransparency = 0.15
+	blur.Parent = screen
+	
+	-- Main container
+	local main = Instance.new("Frame")
+	main.Name = "Main"
+	main.Size = UDim2.new(1, 0, 1, 0)
+	main.BackgroundTransparency = 1
+	main.Parent = screen
+	
+	-- Create all sections
+	Inventory.CreateHeader(main)
+	Inventory.CreateCharacterPreview(main)
+	Inventory.CreateWeaponSlots(main)
+	Inventory.CreateArmorSlots(main)
+	Inventory.CreateInventoryGrid(main)
+	
+	local dismissBtn = Inventory.CreateDismissButton(main)
+	dismissBtn.MouseButton1Click:Connect(function()
+		screen.Enabled = false
+		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+	end)
+	
+	print("[Inventory] Created Destiny-style inventory UI")
+	return screen
+end
+
+return Inventory
+]]></string>
+        </Properties>
+      </Item>
+    </Item>
+  </Item>
+  <Item class="StarterPlayer" referent="29">
+    <Properties>
+      <string name="Name">StarterPlayer</string>
+    </Properties>
+    <Item class="StarterCharacterScripts" referent="30">
+      <Properties>
+        <string name="Name">StarterCharacterScripts</string>
+      </Properties>
+      <Item class="LocalScript" referent="31">
+        <Properties>
+          <string name="Name">CharacterScripts</string>
+          <string name="Source"><![CDATA[-- Gridfall Character Scripts
+-- AGGRESSIVE movement enabler that enables Roblox default controls
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+
+-- Wait for character (script is nested in CharacterScripts folder inside character)
+local character = player.Character or player.CharacterAdded:Wait()
+
+-- Wait for humanoid with retry
+local humanoid, hrp
+for i = 1, 20 do
+	humanoid = character:FindFirstChildOfClass("Humanoid")
+	hrp = character:FindFirstChild("HumanoidRootPart")
+	if humanoid and hrp then break end
+	task.wait(0.25)
+end
+
+if not humanoid or not hrp then
+	warn("[CharacterScript] Failed to find Humanoid or HumanoidRootPart after 5s")
+	return
+end
+
+local WALK_SPEED = 18
+local JUMP_POWER = 60
+
+-- Enable Roblox's default PlayerModule controls
+local function enableDefaultControls()
+	local PlayerModule = player.PlayerScripts:FindFirstChild("PlayerModule")
+	if PlayerModule then
+		local ControlModule = require(PlayerModule):GetControls()
+		if ControlModule then
+			ControlModule:Enable(true)
+			print("[CharacterScript] Default controls enabled via PlayerModule")
+		end
+	end
+end
+
+local function setupCharacter()
+	hrp.Anchored = false
+	humanoid.PlatformStand = false
+	humanoid.Sit = false
+	humanoid.AutoRotate = true
+	humanoid.WalkSpeed = WALK_SPEED
+	humanoid.JumpPower = JUMP_POWER
+	humanoid.JumpHeight = 0 -- Use JumpPower
+	
+	-- Enable all humanoid states
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Running, true)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.RunningNoPhysics, true)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Landed, true)
+	
+	if humanoid:GetState() ~= Enum.HumanoidStateType.Running then
+		humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+	end
+	
+	-- Unanchor all parts
+	for _, part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") and part.Name ~= "Handle" then
+			part.Anchored = false
+		end
+	end
+end
+
+-- Run setup
+setupCharacter()
+task.delay(0.5, enableDefaultControls)
+print("[CharacterScript] Character setup complete - WalkSpeed:", WALK_SPEED, "JumpPower:", JUMP_POWER)
+
+-- Continuously enforce for first 10 seconds
+local startTime = tick()
+RunService.Heartbeat:Connect(function()
+	if tick() - startTime < 10 then
+		humanoid.WalkSpeed = WALK_SPEED
+		humanoid.JumpPower = JUMP_POWER
+		humanoid.PlatformStand = false
+	end
+end)
+
+-- Fix bad states
+humanoid.StateChanged:Connect(function(old, new)
+	if new == Enum.HumanoidStateType.PlatformStanding or 
+	   new == Enum.HumanoidStateType.Seated or
+	   new == Enum.HumanoidStateType.Physics then
+		task.wait(0.1)
+		setupCharacter()
+		print("[CharacterScript] Fixed bad state:", new)
+	end
+end)
+]]></string>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="StarterPlayerScripts" referent="32">
+      <Properties>
+        <string name="Name">StarterPlayerScripts</string>
+      </Properties>
+      <Item class="LocalScript" referent="33">
+        <Properties>
+          <string name="Name">Client</string>
+          <string name="Source">-- Gridfall Client Main
+-- Complete rewrite with all fixes
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local ContextActionService = game:GetService("ContextActionService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- DISABLE ALL ROBLOX DEFAULT UIS
+StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
+
+---------------------------------------
+-- DISABLE BLASTER SYSTEM COMPLETELY
+---------------------------------------
+local function disableBlasterScripts()
+	-- Find and disable Blaster scripts in ReplicatedStorage
+	local blaster = ReplicatedStorage:FindFirstChild("Blaster")
+	if blaster then
+		local scripts = blaster:FindFirstChild("Scripts")
+		if scripts then
+			for _, script in ipairs(scripts:GetDescendants()) do
+				if script:IsA("LocalScript") or script:IsA("ModuleScript") then
+					-- Can't disable directly, but we can track what's there
+					print("[Client] Found Blaster script:", script.Name)
+				end
+			end
+		end
+	end
+end
+
+-- Try to disable Blaster
+pcall(disableBlasterScripts)
+
+-- DO NOT unbind Roblox's essential movement/camera actions!
+-- We were accidentally unbinding WASD controls before.
+-- Instead, just don't interfere with ContextActionService at all.
+print("[Client] Keeping all ContextActionService bindings intact")
+
+---------------------------------------
+-- MENU MANAGER (global menu state for blocking inputs)
+---------------------------------------
+local MenuManager = {
+	_openMenus = {},
+	_isAnyMenuOpen = false
+}
+
+function MenuManager:OpenMenu(menuName)
+	self._openMenus[menuName] = true
+	self._isAnyMenuOpen = true
+	self:_updateInputBlocking()
+end
+
+function MenuManager:CloseMenu(menuName)
+	self._openMenus[menuName] = nil
+	self._isAnyMenuOpen = next(self._openMenus) ~= nil
+	self:_updateInputBlocking()
+end
+
+function MenuManager:IsAnyMenuOpen()
+	return self._isAnyMenuOpen
+end
+
+function MenuManager:_updateInputBlocking()
+	if self._isAnyMenuOpen then
+		-- Block weapon firing by sinking mouse input
+		ContextActionService:BindActionAtPriority(
+			"BlockWeaponFire",
+			function() return Enum.ContextActionResult.Sink end,
+			false,
+			3000, -- High priority to override Blaster
+			Enum.UserInputType.MouseButton1,
+			Enum.UserInputType.MouseButton2
+		)
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		UserInputService.MouseIconEnabled = true
+	else
+		ContextActionService:UnbindAction("BlockWeaponFire")
+	end
+end
+
+-- Make MenuManager globally accessible
+_G.GridfallMenuManager = MenuManager
+
+---------------------------------------
+-- STATE
+---------------------------------------
+local currentEquippedSlot = 0 -- 0 = none, 1-3 = slot number
+local isInventoryOpen = false
+local weaponTools = {} -- {[1] = Tool, [2] = Tool, ...}
+local hudScreen = nil
+local inventoryScreen = nil
+
+---------------------------------------
+-- CAMERA SYSTEM (aggressive enforcement)
+---------------------------------------
+local TPP_MIN_ZOOM = 8
+local TPP_MAX_ZOOM = 20
+local FPP_MIN_ZOOM = 0.5
+local FPP_MAX_ZOOM = 0.5
+local currentCameraMode = "TPP"
+
+local function setCameraMode(mode)
+	currentCameraMode = mode
+	if mode == "FPP" then
+		player.CameraMinZoomDistance = FPP_MIN_ZOOM
+		player.CameraMaxZoomDistance = FPP_MAX_ZOOM
+		player.CameraMode = Enum.CameraMode.Classic
+		-- Show crosshair in FPP
+		if hudScreen then
+			local crosshair = hudScreen:FindFirstChild("Crosshair")
+			if crosshair then crosshair.Visible = true end
+		end
+		print("[Camera] Switched to FPP")
+	else
+		player.CameraMinZoomDistance = TPP_MIN_ZOOM
+		player.CameraMaxZoomDistance = TPP_MAX_ZOOM
+		player.CameraMode = Enum.CameraMode.Classic
+		-- Hide crosshair in TPP
+		if hudScreen then
+			local crosshair = hudScreen:FindFirstChild("Crosshair")
+			if crosshair then crosshair.Visible = false end
+		end
+		-- Force camera to zoom out
+		local camera = workspace.CurrentCamera
+		if camera and player.Character then
+			local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+			if hrp then
+				local lookDir = camera.CFrame.LookVector
+				camera.CFrame = CFrame.new(hrp.Position - lookDir * TPP_MIN_ZOOM, hrp.Position)
+			end
+		end
+		print("[Camera] Switched to TPP")
+	end
+end
+
+-- Continuously enforce camera settings (Blaster keeps overriding)
+RunService.RenderStepped:Connect(function()
+	-- Always enforce CameraMode to Classic (not LockFirstPerson)
+	if player.CameraMode ~= Enum.CameraMode.Classic then
+		player.CameraMode = Enum.CameraMode.Classic
+	end
+	
+	if currentCameraMode == "TPP" then
+		if player.CameraMinZoomDistance &lt; TPP_MIN_ZOOM then
+			player.CameraMinZoomDistance = TPP_MIN_ZOOM
+		end
+		if player.CameraMaxZoomDistance &lt; TPP_MAX_ZOOM then
+			player.CameraMaxZoomDistance = TPP_MAX_ZOOM
+		end
+	end
+end)
+
+-- Start in TPP after character loads
+local function initCamera()
+	task.wait(0.5)
+	setCameraMode("TPP")
+	print("[Camera] Initial TPP mode set")
+end
+
+if player.Character then
+	task.spawn(initCamera)
+end
+player.CharacterAdded:Connect(function()
+	task.spawn(initCamera)
+end)
+
+---------------------------------------
+-- MOVEMENT SYSTEM (BodyVelocity constraint - cannot be overridden)
+---------------------------------------
+local MOVE_SPEED = 22
+local JUMP_VELOCITY = 55
+local moveKeys = {W = false, A = false, S = false, D = false, Space = false}
+local bodyVelocity = nil
+
+UserInputService.InputBegan:Connect(function(input, processed)
+	if input.KeyCode == Enum.KeyCode.W then moveKeys.W = true end
+	if input.KeyCode == Enum.KeyCode.A then moveKeys.A = true end
+	if input.KeyCode == Enum.KeyCode.S then moveKeys.S = true end
+	if input.KeyCode == Enum.KeyCode.D then moveKeys.D = true end
+	if input.KeyCode == Enum.KeyCode.Space then moveKeys.Space = true end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.KeyCode == Enum.KeyCode.W then moveKeys.W = false end
+	if input.KeyCode == Enum.KeyCode.A then moveKeys.A = false end
+	if input.KeyCode == Enum.KeyCode.S then moveKeys.S = false end
+	if input.KeyCode == Enum.KeyCode.D then moveKeys.D = false end
+	if input.KeyCode == Enum.KeyCode.Space then moveKeys.Space = false end
+end)
+
+local function setupBodyVelocity(character)
+	local hrp = character:WaitForChild("HumanoidRootPart", 10)
+	if not hrp then return end
+	
+	-- Remove any existing
+	local existing = hrp:FindFirstChild("GridfallMover")
+	if existing then existing:Destroy() end
+	
+	-- Create BodyVelocity (constraint that FORCES velocity)
+	local bv = Instance.new("BodyVelocity")
+	bv.Name = "GridfallMover"
+	bv.MaxForce = Vector3.new(math.huge, 0, math.huge) -- Infinite horizontal force
+	bv.Velocity = Vector3.zero
+	bv.P = 10000 -- High power
+	bv.Parent = hrp
+	bodyVelocity = bv
+	
+	print("[Movement] BodyVelocity constraint created")
+end
+
+if player.Character then
+	task.spawn(function() setupBodyVelocity(player.Character) end)
+end
+player.CharacterAdded:Connect(function(char)
+	task.spawn(function() setupBodyVelocity(char) end)
+end)
+
+-- Movement loop
+RunService.Heartbeat:Connect(function(dt)
+	local character = player.Character
+	if not character then return end
+	
+	local hrp = character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not hrp or not humanoid then return end
+	
+	-- Ensure BodyVelocity exists
+	local bv = hrp:FindFirstChild("GridfallMover")
+	if not bv then
+		setupBodyVelocity(character)
+		return
+	end
+	
+	-- Keep humanoid functional
+	humanoid.PlatformStand = false
+	humanoid.WalkSpeed = 16
+	humanoid.JumpPower = JUMP_VELOCITY
+	hrp.Anchored = false
+	
+	-- Calculate movement direction
+	local camera = workspace.CurrentCamera
+	local camCF = camera.CFrame
+	local forward = Vector3.new(camCF.LookVector.X, 0, camCF.LookVector.Z)
+	local right = Vector3.new(camCF.RightVector.X, 0, camCF.RightVector.Z)
+	if forward.Magnitude > 0 then forward = forward.Unit end
+	if right.Magnitude > 0 then right = right.Unit end
+	
+	local moveDir = Vector3.zero
+	if moveKeys.W then moveDir = moveDir + forward end
+	if moveKeys.S then moveDir = moveDir - forward end
+	if moveKeys.D then moveDir = moveDir + right end
+	if moveKeys.A then moveDir = moveDir - right end
+	
+	-- Set BodyVelocity (this FORCES the velocity, cannot be overridden)
+	if moveDir.Magnitude > 0 then
+		bv.Velocity = moveDir.Unit * MOVE_SPEED
+	else
+		bv.Velocity = Vector3.zero
+	end
+	
+	-- Jump using humanoid
+	if moveKeys.Space and humanoid:GetState() ~= Enum.HumanoidStateType.Jumping 
+		and humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
+		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+	end
+end)
+
+print("[Client] BodyVelocity movement system active")
+
+---------------------------------------
+-- VIEWMODEL ARMS FIX (replace grey arms with player avatar arms)
+---------------------------------------
+local function replaceViewModelArms()
+	-- Find the ViewModel in workspace (Blaster system parents it there when equipped)
+	local viewModel = workspace:FindFirstChild("ViewModel", true)
+	if not viewModel then return end
+	
+	local character = player.Character
+	if not character then return end
+	
+	-- Get player's arm colors/properties from character
+	local leftArm = character:FindFirstChild("Left Arm") or character:FindFirstChild("LeftUpperArm")
+	local rightArm = character:FindFirstChild("Right Arm") or character:FindFirstChild("RightUpperArm")
+	
+	if not leftArm or not rightArm then return end
+	
+	-- Find ViewModel arms and copy player's appearance
+	for _, part in ipairs(viewModel:GetDescendants()) do
+		if part:IsA("BasePart") then
+			local partName = part.Name:lower()
+			if partName:find("left") and partName:find("arm") then
+				part.Color = leftArm.Color
+				part.Material = leftArm.Material
+			elseif partName:find("right") and partName:find("arm") then
+				part.Color = rightArm.Color
+				part.Material = rightArm.Material
+			elseif partName:find("arm") or partName:find("hand") then
+				-- Generic arm/hand part - use right arm color
+				part.Color = rightArm.Color
+				part.Material = rightArm.Material
+			end
+		end
+	end
+	
+	print("[ViewModel] Applied player arm colors to ViewModel")
+end
+
+-- Run arm replacement when character or workspace changes
+task.spawn(function()
+	while true do
+		task.wait(0.5)
+		if currentEquippedSlot > 0 then
+			replaceViewModelArms()
+		end
+	end
+end)
+
+---------------------------------------
+-- WEAPON SYSTEM
+---------------------------------------
+local function getWeaponTools()
+	local tools = {}
+	local backpack = player:FindFirstChild("Backpack")
+	local character = player.Character
+	
+	if backpack then
+		for _, item in ipairs(backpack:GetChildren()) do
+			if item:IsA("Tool") then
+				table.insert(tools, item)
+			end
+		end
+	end
+	
+	if character then
+		for _, item in ipairs(character:GetChildren()) do
+			if item:IsA("Tool") then
+				table.insert(tools, item)
+			end
+		end
+	end
+	
+	table.sort(tools, function(a, b) return a.Name &lt; b.Name end)
+	return tools
+end
+
+local function updateWeaponSlots()
+	weaponTools = getWeaponTools()
+	
+	if not hudScreen then return end
+	local slotsFrame = hudScreen:FindFirstChild("WeaponSlots")
+	if not slotsFrame then return end
+	
+	for i = 1, 3 do
+		local slot = slotsFrame:FindFirstChild("Slot" .. i)
+		if slot then
+			local nameLabel = slot:FindFirstChild("WeaponName")
+			if not nameLabel then
+				nameLabel = Instance.new("TextLabel")
+				nameLabel.Name = "WeaponName"
+				nameLabel.Size = UDim2.new(1, -6, 0, 12)
+				nameLabel.Position = UDim2.new(0, 3, 1, -15)
+				nameLabel.BackgroundTransparency = 1
+				nameLabel.TextColor3 = Color3.new(1, 1, 1)
+				nameLabel.TextSize = 8
+				nameLabel.Font = Enum.Font.Gotham
+				nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+				nameLabel.Parent = slot
+			end
+			
+			if weaponTools[i] then
+				nameLabel.Text = weaponTools[i].Name
+			else
+				nameLabel.Text = "Empty"
+			end
+			
+			-- Highlight equipped slot
+			if i == currentEquippedSlot then
+				slot.BackgroundColor3 = Color3.fromRGB(65, 185, 220)
+				slot.BackgroundTransparency = 0.2
+			else
+				slot.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+				slot.BackgroundTransparency = 0.3
+			end
+		end
+	end
+end
+
+local function equipWeaponSlot(slotNumber)
+	local character = player.Character
+	if not character then return end
+	
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return end
+	
+	weaponTools = getWeaponTools()
+	
+	-- Toggle: if same slot pressed, unequip
+	if currentEquippedSlot == slotNumber then
+		humanoid:UnequipTools()
+		currentEquippedSlot = 0
+		setCameraMode("TPP")
+		print("[Weapon] Unequipped - TPP mode")
+	else
+		-- Equip new weapon
+		if weaponTools[slotNumber] then
+			humanoid:UnequipTools()
+			humanoid:EquipTool(weaponTools[slotNumber])
+			currentEquippedSlot = slotNumber
+			setCameraMode("FPP")
+			print("[Weapon] Equipped: " .. weaponTools[slotNumber].Name .. " - FPP mode")
+		end
+	end
+	
+	updateWeaponSlots()
+end
+
+---------------------------------------
+-- HUD
+---------------------------------------
+local function createHUD()
+	local screen = Instance.new("ScreenGui")
+	screen.Name = "GridfallHUD"
+	screen.ResetOnSpawn = false
+	screen.IgnoreGuiInset = true
+	screen.DisplayOrder = 10
+	screen.Parent = playerGui
+	
+	-- Crosshair (hidden by default in TPP)
+	local crosshair = Instance.new("Frame")
+	crosshair.Name = "Crosshair"
+	crosshair.Size = UDim2.new(0, 4, 0, 4)
+	crosshair.Position = UDim2.new(0.5, -2, 0.5, -2)
+	crosshair.BackgroundColor3 = Color3.new(1, 1, 1)
+	crosshair.BorderSizePixel = 0
+	crosshair.Visible = false -- Hidden in TPP mode
+	crosshair.Parent = screen
+	Instance.new("UICorner", crosshair).CornerRadius = UDim.new(0, 2)
+	
+	-- Weapon slots
+	local slotsFrame = Instance.new("Frame")
+	slotsFrame.Name = "WeaponSlots"
+	slotsFrame.Size = UDim2.new(0, 200, 0, 50)
+	slotsFrame.Position = UDim2.new(0, 20, 1, -70)
+	slotsFrame.BackgroundTransparency = 1
+	slotsFrame.Parent = screen
+	
+	for i = 1, 3 do
+		local slot = Instance.new("Frame")
+		slot.Name = "Slot" .. i
+		slot.Size = UDim2.new(0, 60, 0, 45)
+		slot.Position = UDim2.new(0, (i-1) * 65, 0, 0)
+		slot.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+		slot.BackgroundTransparency = 0.3
+		slot.Parent = slotsFrame
+		Instance.new("UICorner", slot).CornerRadius = UDim.new(0, 6)
+		
+		local numLabel = Instance.new("TextLabel")
+		numLabel.Name = "SlotNumber"
+		numLabel.Size = UDim2.new(0, 15, 0, 15)
+		numLabel.Position = UDim2.new(0, 3, 0, 3)
+		numLabel.BackgroundColor3 = Color3.fromRGB(65, 185, 220)
+		numLabel.Text = tostring(i)
+		numLabel.TextColor3 = Color3.new(1, 1, 1)
+		numLabel.TextSize = 10
+		numLabel.Font = Enum.Font.GothamBold
+		numLabel.Parent = slot
+		Instance.new("UICorner", numLabel).CornerRadius = UDim.new(0, 3)
+	end
+	
+	-- Hint
+	local hint = Instance.new("TextLabel")
+	hint.Name = "Hint"
+	hint.Size = UDim2.new(0, 300, 0, 20)
+	hint.Position = UDim2.new(0.5, -150, 1, -25)
+	hint.BackgroundTransparency = 1
+	hint.Text = "1/2/3: Weapons | TAB: Inventory | Press again to unequip"
+	hint.TextColor3 = Color3.fromRGB(150, 150, 150)
+	hint.TextSize = 11
+	hint.Font = Enum.Font.Gotham
+	hint.Parent = screen
+	
+	return screen
+end
+
+---------------------------------------
+-- INVENTORY SCREEN
+---------------------------------------
+local function createInventoryScreen()
+	local screen = Instance.new("ScreenGui")
+	screen.Name = "GridfallInventory"
+	screen.ResetOnSpawn = false
+	screen.IgnoreGuiInset = true
+	screen.DisplayOrder = 20
+	screen.Enabled = true
+	screen.Parent = playerGui
+	
+	-- Main container (hidden by default)
+	local container = Instance.new("Frame")
+	container.Name = "Container"
+	container.Size = UDim2.new(0.6, 0, 0.7, 0)
+	container.Position = UDim2.new(0.2, 0, 0.15, 0)
+	container.BackgroundColor3 = Color3.fromRGB(20, 25, 35)
+	container.BackgroundTransparency = 0.1
+	container.Visible = false
+	container.Parent = screen
+	Instance.new("UICorner", container).CornerRadius = UDim.new(0, 12)
+	
+	-- Header
+	local header = Instance.new("TextLabel")
+	header.Name = "Header"
+	header.Size = UDim2.new(1, 0, 0, 50)
+	header.BackgroundColor3 = Color3.fromRGB(30, 35, 50)
+	header.Text = "INVENTORY"
+	header.TextColor3 = Color3.new(1, 1, 1)
+	header.TextSize = 24
+	header.Font = Enum.Font.GothamBold
+	header.Parent = container
+	local headerCorner = Instance.new("UICorner", header)
+	headerCorner.CornerRadius = UDim.new(0, 12)
+	
+	-- Weapons section
+	local weaponsLabel = Instance.new("TextLabel")
+	weaponsLabel.Size = UDim2.new(0, 100, 0, 30)
+	weaponsLabel.Position = UDim2.new(0, 20, 0, 60)
+	weaponsLabel.BackgroundTransparency = 1
+	weaponsLabel.Text = "WEAPONS"
+	weaponsLabel.TextColor3 = Color3.fromRGB(65, 185, 220)
+	weaponsLabel.TextSize = 14
+	weaponsLabel.Font = Enum.Font.GothamBold
+	weaponsLabel.TextXAlignment = Enum.TextXAlignment.Left
+	weaponsLabel.Parent = container
+	
+	-- Weapon slots in inventory
+	for i = 1, 3 do
+		local slot = Instance.new("Frame")
+		slot.Name = "InvSlot" .. i
+		slot.Size = UDim2.new(0, 150, 0, 80)
+		slot.Position = UDim2.new(0, 20 + (i-1) * 160, 0, 100)
+		slot.BackgroundColor3 = Color3.fromRGB(40, 45, 60)
+		slot.Parent = container
+		Instance.new("UICorner", slot).CornerRadius = UDim.new(0, 8)
+		
+		local slotNum = Instance.new("TextLabel")
+		slotNum.Size = UDim2.new(0, 25, 0, 25)
+		slotNum.Position = UDim2.new(0, 5, 0, 5)
+		slotNum.BackgroundColor3 = Color3.fromRGB(65, 185, 220)
+		slotNum.Text = tostring(i)
+		slotNum.TextColor3 = Color3.new(1, 1, 1)
+		slotNum.TextSize = 14
+		slotNum.Font = Enum.Font.GothamBold
+		slotNum.Parent = slot
+		Instance.new("UICorner", slotNum).CornerRadius = UDim.new(0, 4)
+		
+		local weaponName = Instance.new("TextLabel")
+		weaponName.Name = "WeaponName"
+		weaponName.Size = UDim2.new(1, -10, 0, 20)
+		weaponName.Position = UDim2.new(0, 5, 1, -25)
+		weaponName.BackgroundTransparency = 1
+		weaponName.Text = "Empty"
+		weaponName.TextColor3 = Color3.new(1, 1, 1)
+		weaponName.TextSize = 11
+		weaponName.Font = Enum.Font.Gotham
+		weaponName.TextTruncate = Enum.TextTruncate.AtEnd
+		weaponName.TextXAlignment = Enum.TextXAlignment.Left
+		weaponName.Parent = slot
+	end
+	
+	-- Close hint
+	local closeHint = Instance.new("TextLabel")
+	closeHint.Size = UDim2.new(1, 0, 0, 30)
+	closeHint.Position = UDim2.new(0, 0, 1, -30)
+	closeHint.BackgroundTransparency = 1
+	closeHint.Text = "Press TAB or ESC to close"
+	closeHint.TextColor3 = Color3.fromRGB(120, 120, 120)
+	closeHint.TextSize = 12
+	closeHint.Font = Enum.Font.Gotham
+	closeHint.Parent = container
+	
+	return screen, container
+end
+
+local function updateInventoryScreen()
+	if not inventoryScreen then return end
+	local container = inventoryScreen:FindFirstChild("Container")
+	if not container then return end
+	
+	weaponTools = getWeaponTools()
+	
+	for i = 1, 3 do
+		local slot = container:FindFirstChild("InvSlot" .. i)
+		if slot then
+			local nameLabel = slot:FindFirstChild("WeaponName")
+			if nameLabel then
+				if weaponTools[i] then
+					nameLabel.Text = weaponTools[i].Name
+				else
+					nameLabel.Text = "Empty"
+				end
+			end
+		end
+	end
+end
+
+local function toggleInventory()
+	isInventoryOpen = not isInventoryOpen
+	
+	if inventoryScreen then
+		local container = inventoryScreen:FindFirstChild("Container")
+		if container then
+			container.Visible = isInventoryOpen
+			if isInventoryOpen then
+				-- AUTO-UNEQUIP weapons and switch to TPP when menu opens
+				local character = player.Character
+				if character then
+					local humanoid = character:FindFirstChildOfClass("Humanoid")
+					if humanoid then
+						humanoid:UnequipTools()
+					end
+				end
+				currentEquippedSlot = 0
+				setCameraMode("TPP")
+				updateWeaponSlots()
+				updateInventoryScreen()
+				MenuManager:OpenMenu("Inventory")
+				print("[Inventory] OPENED - weapons unequipped, TPP mode")
+			else
+				MenuManager:CloseMenu("Inventory")
+				print("[Inventory] CLOSED")
+			end
+		end
+	end
+end
+
+---------------------------------------
+-- INPUT HANDLING
+---------------------------------------
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	-- Tab always works
+	if input.KeyCode == Enum.KeyCode.Tab then
+		toggleInventory()
+		return
+	end
+	
+	-- ESC closes inventory
+	if input.KeyCode == Enum.KeyCode.Escape and isInventoryOpen then
+		toggleInventory()
+		return
+	end
+	
+	-- Weapon slots (only when inventory closed)
+	if not isInventoryOpen then
+		if input.KeyCode == Enum.KeyCode.One then
+			equipWeaponSlot(1)
+		elseif input.KeyCode == Enum.KeyCode.Two then
+			equipWeaponSlot(2)
+		elseif input.KeyCode == Enum.KeyCode.Three then
+			equipWeaponSlot(3)
+		end
+	end
+end)
+
+---------------------------------------
+-- INITIALIZE
+---------------------------------------
+hudScreen = createHUD()
+inventoryScreen, _ = createInventoryScreen()
+
+-- Update weapon slots periodically
+task.spawn(function()
+	while true do
+		task.wait(1)
+		updateWeaponSlots()
+	end
+end)
+
+-- Initial update
+task.delay(1, function()
+	updateWeaponSlots()
+	print("[Client] Weapon slots updated")
+end)
+
+print("[Gridfall] Client initialized - WASD should work now!")</string>
+        </Properties>
+        <Item class="ModuleScript" referent="34">
+          <Properties>
+            <string name="Name">CameraController</string>
+            <string name="Source"><![CDATA[-- Gridfall Camera Controller
+-- Handles FPP/TPP camera transitions based on weapon state
+-- Uses Roblox's default camera with offset adjustments for TPP
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+
+local Shared = require(ReplicatedStorage:WaitForChild("Shared"))
+local Constants = Shared.Constants
+
+local CameraController = {}
+
+local player = Players.LocalPlayer
+
+-- State
+local currentMode: "FPP" | "TPP" = "TPP"
+local isWeaponEquipped = false
+
+-- Camera settings
+local fppFOV = Constants.CAMERA.FPP_FOV
+local tppFOV = Constants.CAMERA.TPP_FOV
+local tppMinZoom = 8
+local tppMaxZoom = 15
+local fppMinZoom = 0.5
+local fppMaxZoom = 0.5
+
+function CameraController.GetCharacter(): Model?
+	return player.Character
+end
+
+function CameraController.GetHumanoid(): Humanoid?
+	local character = CameraController.GetCharacter()
+	if character then
+		return character:FindFirstChildOfClass("Humanoid")
+	end
+	return nil
+end
+
+function CameraController.SetMode(mode: "FPP" | "TPP")
+	if currentMode == mode then return end
+	
+	currentMode = mode
+	local camera = workspace.CurrentCamera
+	
+	if mode == "FPP" then
+		-- First person mode - use default Roblox FPP
+		player.CameraMinZoomDistance = fppMinZoom
+		player.CameraMaxZoomDistance = fppMaxZoom
+		CameraController.SetCharacterTransparency(1)
+		
+		local tweenInfo = TweenInfo.new(Constants.CAMERA.FPP_TRANSITION_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		local tween = TweenService:Create(camera, tweenInfo, {FieldOfView = fppFOV})
+		tween:Play()
+	else
+		-- Third person mode - use default Roblox TPP with zoom limits
+		player.CameraMinZoomDistance = tppMinZoom
+		player.CameraMaxZoomDistance = tppMaxZoom
+		CameraController.SetCharacterTransparency(0)
+		
+		local tweenInfo = TweenInfo.new(Constants.CAMERA.TPP_TRANSITION_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		local tween = TweenService:Create(camera, tweenInfo, {FieldOfView = tppFOV})
+		tween:Play()
+	end
+	
+	print("[CameraController] Mode changed to " .. mode)
+end
+
+function CameraController.SetCharacterTransparency(transparency: number)
+	local character = CameraController.GetCharacter()
+	if not character then return end
+	
+	for _, part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+			part.LocalTransparencyModifier = transparency
+		end
+	end
+end
+
+function CameraController.OnWeaponEquipped()
+	isWeaponEquipped = true
+	CameraController.SetMode("FPP")
+end
+
+function CameraController.OnWeaponUnequipped()
+	isWeaponEquipped = false
+	CameraController.SetMode("TPP")
+end
+
+function CameraController.SetupRemoteListeners()
+	local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
+	if not Remotes then return end
+	
+	local weaponEquipped = Remotes:FindFirstChild("WeaponEquipped")
+	if weaponEquipped then
+		weaponEquipped.OnClientEvent:Connect(function()
+			CameraController.OnWeaponEquipped()
+		end)
+	end
+	
+	local weaponUnequipped = Remotes:FindFirstChild("WeaponUnequipped")
+	if weaponUnequipped then
+		weaponUnequipped.OnClientEvent:Connect(function()
+			CameraController.OnWeaponUnequipped()
+		end)
+	end
+end
+
+function CameraController.OnCharacterAdded(character: Model)
+	-- Wait for character to load
+	character:WaitForChild("HumanoidRootPart")
+	character:WaitForChild("Humanoid")
+	
+	-- Reset camera
+	local camera = workspace.CurrentCamera
+	camera.CameraType = Enum.CameraType.Custom
+	
+	-- Set initial mode (unarmed = TPP)
+	task.wait(0.2)
+	
+	-- Force TPP zoom distance
+	player.CameraMinZoomDistance = tppMinZoom
+	player.CameraMaxZoomDistance = tppMaxZoom
+	currentMode = "FPP" -- Set to FPP so SetMode will actually apply TPP
+	CameraController.SetMode("TPP")
+end
+
+function CameraController.Init()
+	-- Use Roblox's default camera system
+	local camera = workspace.CurrentCamera
+	camera.CameraType = Enum.CameraType.Custom
+	camera.FieldOfView = tppFOV
+	
+	-- Set initial zoom for TPP (force third person on start)
+	player.CameraMinZoomDistance = tppMinZoom
+	player.CameraMaxZoomDistance = tppMaxZoom
+	player.CameraMode = Enum.CameraMode.Classic
+	
+	-- Force initial mode to TPP
+	currentMode = "TPP"
+	isWeaponEquipped = false
+	
+	-- Setup remote listeners
+	CameraController.SetupRemoteListeners()
+	
+	-- Character added handling
+	player.CharacterAdded:Connect(CameraController.OnCharacterAdded)
+	if player.Character then
+		CameraController.OnCharacterAdded(player.Character)
+	end
+	
+	print("[CameraController] Initialized in TPP mode")
+end
+
+return CameraController
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="35">
+          <Properties>
+            <string name="Name">GUICleanup</string>
+            <string name="Source"><![CDATA[-- Gridfall GUI Cleanup
+-- Destroys existing game GUIs on client side
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local GUICleanup = {}
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Names of OUR GUIs to keep
+local PROTECTED_GUI_NAMES = {
+	["GridfallUI"] = true,
+	["HUDScreen"] = true,
+	["InventoryScreen"] = true,
+	["LoadingScreen"] = true,
+}
+
+function GUICleanup.DestroyExistingGuis()
+	for _, gui in ipairs(playerGui:GetChildren()) do
+		if gui:IsA("ScreenGui") and not PROTECTED_GUI_NAMES[gui.Name] then
+			-- Check if it looks like a game mode GUI (has timer, score, etc.)
+			local hasTimer = gui:FindFirstChild("Timer", true) or gui:FindFirstChild("TimerLabel", true)
+			local hasScore = gui:FindFirstChild("Score", true) or gui:FindFirstChild("ScoreLabel", true)
+			local hasTeam = gui:FindFirstChild("Team", true) or gui:FindFirstChild("TeamLabel", true)
+			
+			if hasTimer or hasScore or hasTeam then
+				gui:Destroy()
+				print("[GUICleanup] Destroyed game GUI: " .. gui.Name)
+			end
+		end
+	end
+end
+
+function GUICleanup.Init()
+	-- Initial cleanup
+	GUICleanup.DestroyExistingGuis()
+	
+	-- Cleanup every second for a while to catch late-loading GUIs
+	task.spawn(function()
+		for i = 1, 30 do
+			task.wait(1)
+			GUICleanup.DestroyExistingGuis()
+		end
+	end)
+	
+	-- Watch for new GUIs being added
+	playerGui.ChildAdded:Connect(function(child)
+		if child:IsA("ScreenGui") and not PROTECTED_GUI_NAMES[child.Name] then
+			task.wait(0.1)
+			-- Check if it's a game mode GUI
+			local hasTimer = child:FindFirstChild("Timer", true) or child:FindFirstChild("TimerLabel", true)
+			local hasScore = child:FindFirstChild("Score", true) or child:FindFirstChild("ScoreLabel", true)
+			
+			if hasTimer or hasScore then
+				child:Destroy()
+				print("[GUICleanup] Destroyed new game GUI: " .. child.Name)
+			end
+		end
+	end)
+	
+	print("[GUICleanup] GUI cleanup active")
+end
+
+return GUICleanup
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="36">
+          <Properties>
+            <string name="Name">InputController</string>
+            <string name="Source"><![CDATA[-- Gridfall Input Controller
+-- Handles all player input including inventory toggle and weapon switching
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ContextActionService = game:GetService("ContextActionService")
+
+local InputController = {}
+
+local player = Players.LocalPlayer
+local isInventoryOpen = false
+local inventoryScreen = nil
+
+function InputController.SetInventoryScreen(screen)
+	inventoryScreen = screen
+end
+
+function InputController.IsInventoryOpen(): boolean
+	return isInventoryOpen
+end
+
+function InputController.ToggleInventory()
+	isInventoryOpen = not isInventoryOpen
+	
+	if inventoryScreen then
+		inventoryScreen.Visible = isInventoryOpen
+	end
+	
+	print("[InputController] Inventory " .. (isInventoryOpen and "OPENED" or "CLOSED"))
+end
+
+function InputController.EquipWeaponSlot(slotNumber: number)
+	local character = player.Character
+	if not character then return end
+	
+	local backpack = player:FindFirstChild("Backpack")
+	local tools = {}
+	
+	-- Get tools from backpack
+	if backpack then
+		for _, tool in ipairs(backpack:GetChildren()) do
+			if tool:IsA("Tool") then
+				table.insert(tools, tool)
+			end
+		end
+	end
+	
+	-- Get currently equipped tool
+	for _, tool in ipairs(character:GetChildren()) do
+		if tool:IsA("Tool") then
+			table.insert(tools, tool)
+		end
+	end
+	
+	-- Sort tools by name for consistent ordering
+	table.sort(tools, function(a, b) return a.Name < b.Name end)
+	
+	-- Equip the tool at slotNumber
+	if tools[slotNumber] then
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			-- Unequip current tool first
+			humanoid:UnequipTools()
+			-- Equip selected tool
+			humanoid:EquipTool(tools[slotNumber])
+			print("[InputController] Equipped: " .. tools[slotNumber].Name)
+		end
+	end
+end
+
+function InputController.OnInputBegan(input: InputObject, gameProcessed: boolean)
+	-- Allow Tab even if gameProcessed (so it works when clicking on UI)
+	if input.KeyCode == Enum.KeyCode.Tab then
+		InputController.ToggleInventory()
+		return
+	end
+	
+	if gameProcessed then return end
+	
+	-- Number keys 1-3 for weapon slots
+	if input.KeyCode == Enum.KeyCode.One then
+		InputController.EquipWeaponSlot(1)
+	elseif input.KeyCode == Enum.KeyCode.Two then
+		InputController.EquipWeaponSlot(2)
+	elseif input.KeyCode == Enum.KeyCode.Three then
+		InputController.EquipWeaponSlot(3)
+	end
+	
+	-- Escape to close inventory
+	if input.KeyCode == Enum.KeyCode.Escape and isInventoryOpen then
+		isInventoryOpen = false
+		if inventoryScreen then
+			inventoryScreen.Visible = false
+		end
+	end
+end
+
+function InputController.Init()
+	-- Input events
+	UserInputService.InputBegan:Connect(InputController.OnInputBegan)
+	
+	print("[InputController] Initialized")
+end
+
+return InputController
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="37">
+          <Properties>
+            <string name="Name">UIController</string>
+            <string name="Source"><![CDATA[-- Gridfall UI Controller
+-- Manages all UI components and state
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = require(ReplicatedStorage:WaitForChild("Shared"))
+local Constants = Shared.Constants
+
+local InputController = require(script.Parent.InputController)
+
+local UIController = {}
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- UI References (will be populated when UI loads)
+local hudScreen: ScreenGui?
+local inventoryScreen: ScreenGui?
+local currentInventory = nil
+
+function UIController.SetInventory(inventory)
+	currentInventory = inventory
+	UIController.UpdateHUD()
+	UIController.UpdateInventoryUI()
+end
+
+function UIController.UpdateHUD()
+	-- HUD updates handled by HUD script
+end
+
+function UIController.UpdateInventoryUI()
+	-- Inventory updates handled by Inventory script
+end
+
+function UIController.ShowInventory()
+	local gridFallUI = playerGui:FindFirstChild("GridfallUI")
+	if gridFallUI then
+		local inventory = gridFallUI:FindFirstChild("InventoryScreen")
+		if inventory then
+			inventory.Enabled = true
+		end
+	end
+end
+
+function UIController.HideInventory()
+	local gridFallUI = playerGui:FindFirstChild("GridfallUI")
+	if gridFallUI then
+		local inventory = gridFallUI:FindFirstChild("InventoryScreen")
+		if inventory then
+			inventory.Enabled = false
+		end
+	end
+end
+
+function UIController.OnInventoryToggle(isOpen: boolean)
+	if isOpen then
+		UIController.ShowInventory()
+	else
+		UIController.HideInventory()
+	end
+end
+
+function UIController.SetupRemoteListeners()
+	local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
+	if not Remotes then return end
+	
+	local inventoryUpdated = Remotes:FindFirstChild("InventoryUpdated")
+	if inventoryUpdated then
+		inventoryUpdated.OnClientEvent:Connect(function(inventory)
+			UIController.SetInventory(inventory)
+		end)
+	end
+end
+
+function UIController.FetchInitialInventory()
+	local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
+	if not Remotes then return end
+	
+	local getInventory = Remotes:FindFirstChild("GetInventory") :: RemoteFunction?
+	if getInventory then
+		local inventory = getInventory:InvokeServer()
+		if inventory then
+			UIController.SetInventory(inventory)
+		end
+	end
+end
+
+function UIController.Init()
+	-- Register input callback
+	InputController.SetInventoryCallback(UIController.OnInventoryToggle)
+	
+	-- Setup remote listeners
+	UIController.SetupRemoteListeners()
+	
+	-- Fetch initial inventory after a short delay
+	task.spawn(function()
+		task.wait(1)
+		UIController.FetchInitialInventory()
+	end)
+	
+	print("[UIController] Initialized")
+end
+
+return UIController
+]]></string>
+          </Properties>
+        </Item>
+      </Item>
+    </Item>
+  </Item>
+  <Item class="Workspace" referent="38">
+    <Properties>
+      <string name="Name">Workspace</string>
+      <bool name="FilteringEnabled">true</bool>
+      <bool name="NeedsPivotMigration">false</bool>
+    </Properties>
+    <Item class="Part" referent="39">
+      <Properties>
+        <string name="Name">Baseplate</string>
+        <bool name="Anchored">true</bool>
+        <Color3uint8 name="Color3uint8">6512483</Color3uint8>
+        <bool name="Locked">true</bool>
+        <Vector3 name="Position">
+          <X>0</X>
+          <Y>-10</Y>
+          <Z>0</Z>
+        </Vector3>
+        <Vector3 name="size">
+          <X>512</X>
+          <Y>20</Y>
+          <Z>512</Z>
+        </Vector3>
+      </Properties>
+    </Item>
+  </Item>
+</roblox>

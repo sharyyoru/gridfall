@@ -128,16 +128,22 @@ end
 function CharacterManager.OnCharacterAdded(character: Model, player: Player)
 	-- Wait for humanoid to be ready
 	local humanoid = character:WaitForChild("Humanoid", 10)
-	if not humanoid then return end
+	local hrp = character:WaitForChild("HumanoidRootPart", 10)
+	if not humanoid or not hrp then return end
 	
 	-- Apply soldier appearance
 	CharacterManager.ApplySoldierAppearance(character, player)
 	
-	-- Set up character stats
+	-- Set up character stats - PURE Roblox defaults
 	humanoid.WalkSpeed = Constants.CHARACTER.DefaultWalkSpeed
 	humanoid.JumpPower = Constants.CHARACTER.DefaultJumpPower
+	humanoid.UseJumpPower = true
+	humanoid.JumpHeight = 0
 	
-	print("[CharacterManager] Applied soldier appearance to " .. player.Name)
+	-- Basic server-side setup - NO custom physics
+	hrp.Anchored = false
+	
+	print("[CharacterManager] Applied soldier appearance and basic setup to " .. player.Name)
 end
 
 function CharacterManager.OnPlayerAdded(player: Player)

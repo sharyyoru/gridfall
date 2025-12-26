@@ -12,6 +12,12 @@
       },
       "Blaster": {
         "$path": "src/blaster"
+      },
+      "Utility": {
+        "$path": "src/replicatedstorage-utility"
+      },
+      "Wilson": {
+        "$path": "src/replicatedstorage-wilson"
       }
     },
 
@@ -24,12 +30,21 @@
     "ServerScriptService": {
       "Server": {
         "$path": "src/server"
+      },
+      "Blaster": {
+        "$path": "src/server-blaster"
+      },
+      "Utility": {
+        "$path": "src/server-utility"
       }
     },
 
     "ServerStorage": {
       "ServerStorage": {
         "$path": "src/serverstorage"
+      },
+      "Laser Tag Template Library": {
+        "$path": "src/serverstorage-laser-tag-template-library"
       }
     },
 

@@ -7,7 +7,6 @@ local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local ContextActionService = game:GetService("ContextActionService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -68,20 +67,13 @@ function MenuManager:IsAnyMenuOpen()
 end
 
 function MenuManager:_updateInputBlocking()
+	-- DISABLED - This was blocking Roblox's default movement
+	-- Don't bind any ContextActionService actions that interfere with movement
 	if self._isAnyMenuOpen then
-		-- Block weapon firing by sinking mouse input
-		ContextActionService:BindActionAtPriority(
-			"BlockWeaponFire",
-			function() return Enum.ContextActionResult.Sink end,
-			false,
-			3000, -- High priority to override Blaster
-			Enum.UserInputType.MouseButton1,
-			Enum.UserInputType.MouseButton2
-		)
 		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 		UserInputService.MouseIconEnabled = true
 	else
-		ContextActionService:UnbindAction("BlockWeaponFire")
+		-- No action needed - don't interfere with Roblox's input system
 	end
 end
 
@@ -172,107 +164,32 @@ player.CharacterAdded:Connect(function()
 end)
 
 ---------------------------------------
--- MOVEMENT SYSTEM (BodyVelocity constraint - cannot be overridden)
+-- MOVEMENT SYSTEM (DISABLED - using normal humanoid movement)
 ---------------------------------------
-local MOVE_SPEED = 22
-local JUMP_VELOCITY = 55
-local moveKeys = {W = false, A = false, S = false, D = false, Space = false}
-local bodyVelocity = nil
+-- BodyVelocity was causing sinking and physics issues
+-- We now use normal Roblox humanoid movement instead
 
-UserInputService.InputBegan:Connect(function(input, processed)
-	if input.KeyCode == Enum.KeyCode.W then moveKeys.W = true end
-	if input.KeyCode == Enum.KeyCode.A then moveKeys.A = true end
-	if input.KeyCode == Enum.KeyCode.S then moveKeys.S = true end
-	if input.KeyCode == Enum.KeyCode.D then moveKeys.D = true end
-	if input.KeyCode == Enum.KeyCode.Space then moveKeys.Space = true end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.W then moveKeys.W = false end
-	if input.KeyCode == Enum.KeyCode.A then moveKeys.A = false end
-	if input.KeyCode == Enum.KeyCode.S then moveKeys.S = false end
-	if input.KeyCode == Enum.KeyCode.D then moveKeys.D = false end
-	if input.KeyCode == Enum.KeyCode.Space then moveKeys.Space = false end
-end)
-
-local function setupBodyVelocity(character)
+local function removeBodyVelocity(character)
 	local hrp = character:WaitForChild("HumanoidRootPart", 10)
 	if not hrp then return end
 	
-	-- Remove any existing
+	-- Remove any existing BodyVelocity that was causing issues
 	local existing = hrp:FindFirstChild("GridfallMover")
-	if existing then existing:Destroy() end
-	
-	-- Create BodyVelocity (constraint that FORCES velocity)
-	local bv = Instance.new("BodyVelocity")
-	bv.Name = "GridfallMover"
-	bv.MaxForce = Vector3.new(math.huge, 0, math.huge) -- Infinite horizontal force
-	bv.Velocity = Vector3.zero
-	bv.P = 10000 -- High power
-	bv.Parent = hrp
-	bodyVelocity = bv
-	
-	print("[Movement] BodyVelocity constraint created")
+	if existing then 
+		existing:Destroy()
+		print("[Movement] Removed problematic BodyVelocity")
+	end
 end
 
+-- Clean up any existing BodyVelocity
 if player.Character then
-	task.spawn(function() setupBodyVelocity(player.Character) end)
+	task.spawn(function() removeBodyVelocity(player.Character) end)
 end
 player.CharacterAdded:Connect(function(char)
-	task.spawn(function() setupBodyVelocity(char) end)
+	task.spawn(function() removeBodyVelocity(char) end)
 end)
 
--- Movement loop
-RunService.Heartbeat:Connect(function(dt)
-	local character = player.Character
-	if not character then return end
-	
-	local hrp = character:FindFirstChild("HumanoidRootPart")
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if not hrp or not humanoid then return end
-	
-	-- Ensure BodyVelocity exists
-	local bv = hrp:FindFirstChild("GridfallMover")
-	if not bv then
-		setupBodyVelocity(character)
-		return
-	end
-	
-	-- Keep humanoid functional
-	humanoid.PlatformStand = false
-	humanoid.WalkSpeed = 16
-	humanoid.JumpPower = JUMP_VELOCITY
-	hrp.Anchored = false
-	
-	-- Calculate movement direction
-	local camera = workspace.CurrentCamera
-	local camCF = camera.CFrame
-	local forward = Vector3.new(camCF.LookVector.X, 0, camCF.LookVector.Z)
-	local right = Vector3.new(camCF.RightVector.X, 0, camCF.RightVector.Z)
-	if forward.Magnitude > 0 then forward = forward.Unit end
-	if right.Magnitude > 0 then right = right.Unit end
-	
-	local moveDir = Vector3.zero
-	if moveKeys.W then moveDir = moveDir + forward end
-	if moveKeys.S then moveDir = moveDir - forward end
-	if moveKeys.D then moveDir = moveDir + right end
-	if moveKeys.A then moveDir = moveDir - right end
-	
-	-- Set BodyVelocity (this FORCES the velocity, cannot be overridden)
-	if moveDir.Magnitude > 0 then
-		bv.Velocity = moveDir.Unit * MOVE_SPEED
-	else
-		bv.Velocity = Vector3.zero
-	end
-	
-	-- Jump using humanoid
-	if moveKeys.Space and humanoid:GetState() ~= Enum.HumanoidStateType.Jumping 
-		and humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
-		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-	end
-end)
-
-print("[Client] BodyVelocity movement system active")
+print("[Client] BodyVelocity movement system DISABLED - using normal humanoid movement")
 
 ---------------------------------------
 -- VIEWMODEL ARMS FIX (replace grey arms with player avatar arms)
